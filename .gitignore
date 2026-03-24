@@ -1,0 +1,23 @@
+# config
+markdown-blog/config.yaml
+
+# logs
+logs/
+*.log
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Build
+markdown-blog/server
+blog-frontend/dist
+
+# node_modules
+blog-frontend/node_modules/

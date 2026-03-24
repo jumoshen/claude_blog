@@ -1,0 +1,22 @@
+services:
+  api:
+    build: ./markdown-blog
+    ports:
+      - "8080:8080"
+    environment:
+      - GIN_MODE=release
+      - DATABASE_HOST=mysql-container
+      - REDIS_HOST=redis
+    networks:
+      - secure-hub-net
+
+  web:
+    build: ./blog-frontend
+    ports:
+      - "3000:80"
+    networks:
+      - secure-hub-net
+
+networks:
+  secure-hub-net:
+    external: true

@@ -9,7 +9,5 @@ FROM alpine:latest
 WORKDIR /app
 COPY --from=builder /app/server .
 COPY config.yaml .
-COPY templates ./templates
-COPY static ./static
 EXPOSE 8080
 CMD ["./server"]

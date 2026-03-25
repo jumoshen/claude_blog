@@ -21,3 +21,6 @@ blog-frontend/dist
 
 # node_modules
 blog-frontend/node_modules/
+
+# Admin project (独立仓库 git@github.com:jumoshen/claude-blog-admin.git)
+claude-blog-admin/

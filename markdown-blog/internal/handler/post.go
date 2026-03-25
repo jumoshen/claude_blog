@@ -74,6 +74,9 @@ func (h *PostHandler) GetPost(c *gin.Context) {
 		return
 	}
 
+	// 记录访问
+	h.svc.RecordVisit(slug, c.ClientIP(), c.Request.UserAgent(), 0)
+
 	response.Success(c, gin.H{
 		"post":    info,
 		"content": template.HTML(content),

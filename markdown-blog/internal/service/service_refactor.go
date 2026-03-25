@@ -372,3 +372,17 @@ func (s *Service) Logout(ctx context.Context, jti string, exp time.Time) error {
 	}
 	return s.repo.AddToBlacklist(ctx, jti, ttl)
 }
+
+// RecordVisit 记录访问日志
+func (s *Service) RecordVisit(slug, ip, userAgent string, userID int64) {
+	visit := &model.Visit{
+		PostSlug:  slug,
+		IP:        ip,
+		UserAgent: userAgent,
+		UserID:    userID,
+	}
+	// 异步记录，不阻塞请求
+	go func() {
+		s.repo.CreateVisit(visit)
+	}()
+}

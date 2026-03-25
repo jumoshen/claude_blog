@@ -29,5 +29,8 @@ type Post struct {
 
 type Visit struct {
 	gorm.Model
-	PostSlug string `gorm:"index"`
+	PostSlug  string `gorm:"size:200;index"`
+	UserID    int64  `gorm:"index"`
+	IP        string `gorm:"size:50"`
+	UserAgent string `gorm:"size:500"`
 }

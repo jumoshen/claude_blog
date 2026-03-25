@@ -5,6 +5,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 
+	"markdown-blog/internal/model"
 	"markdown-blog/internal/pkg/jwt"
 	"markdown-blog/internal/pkg/response"
 )
@@ -79,4 +80,28 @@ func GetUserClaims(c *gin.Context) *jwt.Claims {
 		return nil
 	}
 	return claims
+}
+
+// VisitLogger 访问日志中间件
+func VisitLogger(createVisit func(*model.Visit) error, getUserID func(*gin.Context) int64) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		c.Next()
+
+		// 只记录成功的 GET 请求
+		if c.Request.Method == "GET" && c.Writer.Status() == 200 {
+			slug := c.Param("slug")
+			if slug != "" {
+				visit := &model.Visit{
+					PostSlug:  slug,
+					UserID:    getUserID(c),
+					IP:        c.ClientIP(),
+					UserAgent: c.Request.UserAgent(),
+				}
+				// 异步记录访问
+				go func() {
+					createVisit(visit)
+				}()
+			}
+		}
+	}
 }

@@ -169,3 +169,8 @@ func (r *Repository) GetAllCategories() (map[string]int, error) {
 	}
 	return catCount, nil
 }
+
+// CreateVisit 创建访问记录
+func (r *Repository) CreateVisit(visit *model.Visit) error {
+	return r.db.Create(visit).Error
+}

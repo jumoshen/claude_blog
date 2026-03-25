@@ -1,13 +1,12 @@
-# Markdown Blog (C端博客)
+# Markdown Blog (C端API服务)
 
-基于 Markdown 文件的静态博客系统，提供文章列表、详情、分类、标签等功能。
+纯 API 服务，为前端博客项目提供数据支持。
 
 ## 技术栈
 
 | 层级 | 技术 |
 |------|------|
 | 后端框架 | Gin + GORM |
-| 前端 | 原生 HTML/JS |
 | 数据库 | MySQL + Redis |
 | 认证 | JWT |
 
@@ -19,7 +18,7 @@ markdown-blog/
 ├── internal/
 │   ├── config/             # 配置加载
 │   ├── handler/            # HTTP处理器
-│   ├── logger/             # 日志 (lumberjack)
+│   ├── logger/             # 日志
 │   ├── middleware/          # 中间件
 │   ├── model/              # 数据模型
 │   ├── pkg/
@@ -27,9 +26,9 @@ markdown-blog/
 │   │   └── response/       # 统一响应
 │   ├── repository/         # 数据访问
 │   └── service/            # 业务逻辑
-├── posts/                  # Markdown文章目录
+├── db/                     # 数据库迁移SQL
 ├── config.yaml             # 配置文件
-└── main.go
+└── Makefile
 ```
 
 ## 快速启动
@@ -41,35 +40,19 @@ go mod tidy
 go run ./cmd/server
 ```
 
-服务启动后访问 http://localhost:8080
-
-## 文章格式
-
-```markdown
----
-title: "文章标题"
-date: 2024-01-01T10:00:00+08:00
-draft: false
-tags: ["tag1", "tag2"]
-categories: ["Category"]
-keywords: "关键词"
----
-
-文章标题<!--more-->
-
-正文内容...
-```
-
 ## API
 
 | Method | Path | 说明 |
 |--------|------|------|
-| GET | / | 首页 |
-| GET | /posts | 文章列表 |
-| GET | /posts/:slug | 文章详情 |
-| GET | /tags | 标签列表 |
-| GET | /tags/:tag | 标签下的文章 |
-| GET | /categories | 分类列表 |
-| GET | /categories/:category | 分类下的文章 |
-| POST | /api/auth/login | 登录 |
-| POST | /api/auth/logout | 登出 |
+| GET | /api/v1/site | 站点信息 |
+| GET | /api/v1/posts | 文章列表 |
+| GET | /api/v1/posts/:slug | 文章详情 |
+| GET | /api/v1/archives | 归档列表 |
+| GET | /api/v1/about | 关于页面 |
+| GET | /api/v1/tags | 标签列表 |
+| GET | /api/v1/categories | 分类列表 |
+| GET | /api/v1/auth/login | 登录信息 |
+| POST | /api/v1/auth/callback | GitHub OAuth回调 |
+| POST | /api/v1/auth/logout | 登出 |
+| GET | /api/v1/auth/me | 当前用户信息 |
+| POST | /api/v1/admin/refresh | 刷新内容 (需认证) |

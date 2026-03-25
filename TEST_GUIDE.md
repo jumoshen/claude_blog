@@ -11,7 +11,7 @@ docker run -d --name redis -p 6379:6379 redis:7-alpine
 
 ### 2. 启动后端服务
 ```bash
-cd /Users/mac/code/blog/markdown-blog
+cd /Users/mac/code/blog/frontend-api
 go build -o blog ./cmd/server
 ./blog
 # 服务将在 localhost:8080 启动

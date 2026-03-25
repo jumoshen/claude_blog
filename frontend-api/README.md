@@ -1,4 +1,4 @@
-# Markdown Blog (C端API服务)
+# Frontend API (C端API服务)
 
 纯 API 服务，为前端博客项目提供数据支持。
 
@@ -13,7 +13,7 @@
 ## 项目结构
 
 ```
-markdown-blog/
+frontend-api/
 ├── cmd/server/             # 入口
 ├── internal/
 │   ├── config/             # 配置加载

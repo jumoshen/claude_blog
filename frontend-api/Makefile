@@ -6,7 +6,7 @@ BUILD_DIR=bin
 CMD_DIR=cmd/server
 
 # Docker variables
-DOCKER_IMAGE=markdown-blog
+DOCKER_IMAGE=frontend-api
 DOCKER_TAG=latest
 
 # Swagger

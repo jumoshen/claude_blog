@@ -1,5 +1,5 @@
 # config
-markdown-blog/config.yaml
+frontend-api/config.yaml
 
 # logs
 logs/
@@ -16,7 +16,7 @@ logs/
 Thumbs.db
 
 # Build
-markdown-blog/server
+frontend-api/server
 blog-frontend/dist
 
 # node_modules

@@ -44,4 +44,4 @@ content:
 jwt:
   secret: "your-jwt-secret-key-change-in-production"
   expiration: 604800 # 7 days in seconds
-  issuer: "markdown-blog"
+  issuer: "frontend-api"

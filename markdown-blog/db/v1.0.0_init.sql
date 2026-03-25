@@ -1,0 +1,48 @@
+-- 博客数据库初始化脚本 v1.0.0
+
+CREATE DATABASE IF NOT EXISTS blog CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+USE blog;
+
+-- 用户表
+CREATE TABLE IF NOT EXISTS users (
+    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    created_at DATETIME(3) DEFAULT CURRENT_TIMESTAMP(3),
+    updated_at DATETIME(3) DEFAULT CURRENT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3),
+    deleted_at DATETIME(3),
+    git_hub_id BIGINT UNSIGNED NOT NULL UNIQUE COMMENT 'GitHub用户ID',
+    login VARCHAR(255) COMMENT 'GitHub登录名',
+    name VARCHAR(255) COMMENT '显示名称',
+    avatar_url VARCHAR(512) COMMENT '头像URL',
+    email VARCHAR(255) COMMENT '邮箱'
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- 文章表
+CREATE TABLE IF NOT EXISTS posts (
+    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    created_at DATETIME(3) DEFAULT CURRENT_TIMESTAMP(3),
+    updated_at DATETIME(3) DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3),
+    deleted_at DATETIME(3),
+    slug VARCHAR(255) NOT NULL UNIQUE COMMENT '文章URL slug',
+    title VARCHAR(255) COMMENT '文章标题',
+    date DATETIME(3) COMMENT '发布日期',
+    tags TEXT COMMENT '标签，逗号分隔',
+    categories TEXT COMMENT '分类，逗号分隔',
+    summary TEXT COMMENT '摘要',
+    content LONGTEXT COMMENT 'HTML内容',
+    views BIGINT UNSIGNED DEFAULT 0 COMMENT '阅读量'
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- 访问记录表
+CREATE TABLE IF NOT EXISTS visits (
+    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    created_at DATETIME(3) DEFAULT CURRENT_TIMESTAMP(3),
+    updated_at DATETIME(3) DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3),
+    deleted_at DATETIME(3),
+    post_slug VARCHAR(255) COMMENT '文章slug'
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- 索引
+CREATE INDEX idx_posts_date ON posts(date DESC);
+CREATE INDEX idx_posts_slug ON posts(slug);
+CREATE INDEX idx_visits_post_slug ON visits(post_slug);

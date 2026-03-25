@@ -9,14 +9,15 @@
       <div class="tags">
         <el-tag v-for="tag in post.tags" :key="tag" size="small">{{ tag }}</el-tag>
       </div>
-      <div class="content" v-html="content"></div>
+      <div class="content" v-html="renderedContent"></div>
     </article>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import { useRoute } from 'vue-router'
+import { marked } from 'marked'
 import api from '../api'
 
 const route = useRoute()
@@ -29,6 +30,11 @@ onMounted(async () => {
     post.value = res.data.post
     content.value = res.data.content
   }
+})
+
+const renderedContent = computed(() => {
+  if (!content.value) return ''
+  return marked.parse(content.value)
 })
 
 const formatDate = (date) => {

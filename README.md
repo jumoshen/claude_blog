@@ -15,7 +15,7 @@
 | 项目 | 说明 | 端口 |
 |------|------|------|
 | [frontend-api](./frontend-api/) | API 服务 | 8080 |
-| [blog-frontend](./blog-frontend/) | 前端页面 | 5173 |
+| [blog-frontend](./blog-frontend/) | 前端页面 | 3000 |
 
 ### 快速启动
 
@@ -35,14 +35,24 @@ npm run dev
 
 | 项目 | 说明 | 端口 |
 |------|------|------|
-| [claude-blog-admin](./claude-blog-admin/) | 管理后台 | 3000 |
+| [claude-blog-admin](./claude-blog-admin/) | 管理后台 | 3001 |
 
-### Docker Compose
+### Docker Compose (统一部署)
+
+所有服务统一管理在根目录 `docker-compose.yml`：
 
 ```bash
-cd claude-blog-admin
 docker-compose up --build
 ```
+
+| 服务 | 端口 |
+|------|------|
+| MySQL | 3307 |
+| Redis | 6380 |
+| C端 API | 8080 |
+| C端 前端 | 3000 |
+| B端 后端 | 8082 |
+| B端 前端 | 3001 |
 
 ## 技术栈
 

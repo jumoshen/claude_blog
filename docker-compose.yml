@@ -1,22 +1,75 @@
+version: '3.8'
+
 services:
-  api:
+  mysql:
+    image: mysql:8
+    container_name: cc-blog-mysql
+    environment:
+      - MYSQL_ROOT_PASSWORD=123456
+      - MYSQL_DATABASE=blog
+    ports:
+      - "3307:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    networks:
+      - cc-blog-net
+
+  redis:
+    image: redis:7-alpine
+    container_name: cc-blog-redis
+    ports:
+      - "6380:6379"
+    networks:
+      - cc-blog-net
+
+  frontend-api:
     build: ./frontend-api
+    container_name: cc-blog-api
     ports:
       - "8080:8080"
     environment:
       - GIN_MODE=release
-      - DATABASE_HOST=mysql-container
-      - REDIS_HOST=redis
+    depends_on:
+      - mysql
+      - redis
     networks:
-      - secure-hub-net
+      - cc-blog-net
 
-  web:
+  blog-frontend:
     build: ./blog-frontend
+    container_name: cc-blog-web
     ports:
       - "3000:80"
+    depends_on:
+      - frontend-api
     networks:
-      - secure-hub-net
+      - cc-blog-net
+
+  admin-backend:
+    build: ./claude-blog-admin/blog-admin-backend
+    container_name: cc-blog-admin-backend
+    ports:
+      - "8082:8080"
+    environment:
+      - TZ=Asia/Shanghai
+    depends_on:
+      - mysql
+    networks:
+      - cc-blog-net
+
+  admin-frontend:
+    build: ./claude-blog-admin/blog-admin-frontend
+    container_name: cc-blog-admin-frontend
+    ports:
+      - "3001:80"
+    depends_on:
+      - admin-backend
+    networks:
+      - cc-blog-net
 
 networks:
-  secure-hub-net:
-    external: true
+  cc-blog-net:
+    driver: bridge
+
+volumes:
+  mysql_data:

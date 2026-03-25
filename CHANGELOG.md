@@ -26,6 +26,7 @@
 
 ### 测试
 - [x] Docker 部署验证通过
+- [x] 后端单元测试覆盖 (config 92.3%, response 100%, logger 84.7%, middleware 95.0%, service 34.4%)
 - [ ] 前后端联调测试
 
 ---

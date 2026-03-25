@@ -45,6 +45,21 @@ services:
     networks:
       - cc-blog-net
 
+  file-service:
+    image: minio/minio:latest
+    container_name: cc-blog-file-service
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    environment:
+      - MINIO_ROOT_USER=admin
+      - MINIO_ROOT_PASSWORD=12345678
+    volumes:
+      - file_data:/data
+    networks:
+      - cc-blog-net
+    command: server /data --console-address ":9001"
+
   admin-backend:
     build: ./claude-blog-admin/blog-admin-backend
     container_name: cc-blog-admin-backend
@@ -52,11 +67,15 @@ services:
       - "8082:8080"
     environment:
       - TZ=Asia/Shanghai
-      - BASE_URL=http://localhost:8082
-    volumes:
-      - admin_uploads:/app/uploads
+      - MINIO_ENDPOINT=file-service:9000
+      - MINIO_ACCESS_KEY=admin
+      - MINIO_SECRET_KEY=12345678
+      - MINIO_BUCKET=uploads
+      - MINIO_USE_SSL=false
+      - BASE_URL=http://localhost:9000
     depends_on:
       - mysql
+      - file-service
     networks:
       - cc-blog-net
 
@@ -76,4 +95,4 @@ networks:
 
 volumes:
   mysql_data:
-  admin_uploads:
+  file_data:

@@ -12,10 +12,12 @@ All notable changes to this project will be documented in this file.
 
 ### Fixed
 - 修复 Dockerfile templates 文件夹不存在的问题
+- 数据库时间字段去掉毫秒精度
 
 ### Changed
 - 简化 Dockerfile，移除不存在的 static 和 templates 文件夹
 - 优化容器网络配置
+- C端文章时间显示格式化为 Y-m-d H:i
 
 ## [1.0.0] - 2026-03-24
 

@@ -9,6 +9,14 @@ export const useUserStore = defineStore('user', {
   }),
 
   actions: {
+    setToken(token) {
+      this.token = token
+      this.isLoggedIn = true
+      localStorage.setItem('token', token)
+      // Fetch user info with the token
+      this.fetchMe()
+    },
+
     setUser(user, token) {
       this.user = user
       this.token = token

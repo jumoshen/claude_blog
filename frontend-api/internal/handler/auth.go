@@ -120,7 +120,7 @@ func (h *AuthHandler) Callback(c *gin.Context) {
 	}
 
 	// Generate JWT token
-	jwtToken, jti, err := h.jwt.GenerateToken(dbUser.GitHubID, dbUser.Login, dbUser.Name, dbUser.AvatarURL, dbUser.Email)
+	jwtToken, _, err := h.jwt.GenerateToken(dbUser.GitHubID, dbUser.Login, dbUser.Name, dbUser.AvatarURL, dbUser.Email)
 	if err != nil {
 		h.log.Error("[AUTH] Failed to generate JWT: %v", err)
 		response.InternalError(c, "Failed to generate token")
@@ -129,19 +129,9 @@ func (h *AuthHandler) Callback(c *gin.Context) {
 
 	h.log.Info("[AUTH] User logged in successfully: %s (ID: %d)", dbUser.Login, dbUser.GitHubID)
 
-	response.Success(c, gin.H{
-		"token":      jwtToken,
-		"token_type": "Bearer",
-		"expires_in": h.jwt.GetExpiration(),
-		"jti":        jti,
-		"user": gin.H{
-			"id":         dbUser.GitHubID,
-			"login":      dbUser.Login,
-			"name":       dbUser.Name,
-			"avatar_url": dbUser.AvatarURL,
-			"email":      dbUser.Email,
-		},
-	})
+	// Redirect to frontend login page with token
+	// Frontend will store token and redirect to home
+	c.Redirect(302, "https://jumoshen.cn/login?token="+jwtToken)
 }
 
 // Logout handles user logout

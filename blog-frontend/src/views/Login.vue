@@ -27,7 +27,16 @@ onMounted(async () => {
     router.push('/')
   }
 
-  // Handle OAuth callback
+  // Handle OAuth callback with token (redirected from API)
+  const token = new URLSearchParams(window.location.search).get('token')
+  if (token) {
+    userStore.setToken(token)
+    ElMessage.success('Login successful!')
+    router.push('/')
+    return
+  }
+
+  // Handle OAuth callback with code (direct GitHub redirect)
   const code = new URLSearchParams(window.location.search).get('code')
   if (code) {
     loading.value = true

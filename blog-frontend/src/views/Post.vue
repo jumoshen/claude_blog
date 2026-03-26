@@ -15,7 +15,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, computed } from 'vue'
+import { ref, watch, onMounted, computed } from 'vue'
 import { useRoute } from 'vue-router'
 import { marked } from 'marked'
 import api from '../api'
@@ -24,13 +24,18 @@ const route = useRoute()
 const post = ref(null)
 const content = ref('')
 
-onMounted(async () => {
+const fetchPost = async () => {
   const res = await api.getPost(route.params.slug)
   if (res.code === 0) {
     post.value = res.data.post
     content.value = res.data.content
   }
-})
+}
+
+onMounted(fetchPost)
+
+// 监听路由参数变化，重新加载数据
+watch(() => route.params.slug, fetchPost)
 
 const renderedContent = computed(() => {
   if (!content.value) return ''

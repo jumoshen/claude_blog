@@ -1,13 +1,29 @@
 <template>
-  <div class="home">
+  <div class="home" :class="'theme-' + styleStore.currentTheme">
     <div class="main-content">
       <div class="post-list">
-        <div v-if="activeTag" class="filter-bar">
-          <span>Tag: <strong>{{ activeTag }}</strong></span>
-          <el-button text @click="clearTag">清除</el-button>
+        <transition name="fade" appear>
+          <div v-if="activeTag" class="filter-bar">
+            <span class="filter-icon">🏷️</span>
+            <span>Tag: <strong>{{ activeTag }}</strong></span>
+            <el-button text @click="clearTag">清除</el-button>
+          </div>
+        </transition>
+
+        <transition-group name="list" tag="div" class="posts-wrapper">
+          <PostCard
+            v-for="(post, index) in filteredPosts"
+            :key="post.slug"
+            :post="post"
+            :style="{ '--delay': index * 0.1 + 's' }"
+            class="post-item"
+          />
+        </transition-group>
+
+        <div v-if="filteredPosts.length === 0" class="empty">
+          <span class="empty-icon">📭</span>
+          <p>暂无文章</p>
         </div>
-        <PostCard v-for="post in filteredPosts" :key="post.slug" :post="post" />
-        <div v-if="filteredPosts.length === 0" class="empty">No posts yet.</div>
       </div>
       <aside class="sidebar">
         <TagCloud :tags="tags" @tag-click="handleTagClick" />
@@ -24,12 +40,14 @@ import api from '../api'
 import PostCard from '../components/post/PostCard.vue'
 import TagCloud from '../components/post/TagCloud.vue'
 import CategoryList from '../components/post/CategoryList.vue'
+import { useStyleStore } from '../store/style'
 
 const route = useRoute()
 const router = useRouter()
 const posts = ref([])
 const tags = ref({})
 const categories = ref({})
+const styleStore = useStyleStore()
 
 const activeTag = computed(() => route.query.tag || '')
 
@@ -59,23 +77,115 @@ onMounted(async () => {
 </script>
 
 <style scoped>
-.home { max-width: 1200px; margin: 0 auto; padding: 20px; }
-.main-content { display: flex; gap: 20px; }
-.post-list { flex: 1; }
-.sidebar { width: 280px; }
-.empty { text-align: center; padding: 40px; color: #999; }
+.home {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 20px;
+  position: relative;
+  z-index: 1;
+}
+
+.main-content {
+  display: flex;
+  gap: 24px;
+}
+
+.post-list {
+  flex: 1;
+  min-width: 0;
+}
+
+.sidebar {
+  width: 280px;
+  flex-shrink: 0;
+}
+
+.posts-wrapper {
+  position: relative;
+}
+
+.post-item {
+  animation: slideUp 0.6s ease-out forwards;
+  animation-delay: var(--delay);
+  opacity: 0;
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.list-enter-active {
+  transition: all 0.5s ease-out;
+}
+
+.list-leave-active {
+  transition: all 0.3s ease-in;
+}
+
+.list-enter-from {
+  opacity: 0;
+  transform: translateX(-30px);
+}
+
+.list-leave-to {
+  opacity: 0;
+  transform: translateX(30px);
+}
+
 .filter-bar {
   display: flex;
   align-items: center;
   gap: 12px;
   padding: 12px 16px;
   background: var(--accent-bg);
-  border-radius: 8px;
+  border-radius: 12px;
   margin-bottom: 20px;
   color: var(--text);
+  border: 1px solid var(--accent-border);
 }
+
+.filter-icon {
+  font-size: 16px;
+}
+
+.empty {
+  text-align: center;
+  padding: 60px 20px;
+  color: var(--text);
+}
+
+.empty-icon {
+  font-size: 48px;
+  display: block;
+  margin-bottom: 16px;
+  animation: float 3s ease-in-out infinite;
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-10px); }
+}
+
+.fade-enter-active, .fade-leave-active {
+  transition: opacity 0.3s ease;
+}
+.fade-enter-from, .fade-leave-to {
+  opacity: 0;
+}
+
 @media (max-width: 768px) {
-  .main-content { flex-direction: column; }
-  .sidebar { width: 100%; }
+  .main-content {
+    flex-direction: column;
+  }
+  .sidebar {
+    width: 100%;
+  }
 }
 </style>

@@ -8,6 +8,7 @@ export const useStyleStore = defineStore('style', () => {
       logo: '/logo-pixel.png',
       colors: {
         accent: '#b366ff',
+        accentRgb: '179, 102, 255',
         accentBg: 'rgba(179, 102, 255, 0.1)',
         accentBorder: 'rgba(179, 102, 255, 0.5)',
         text: '#6b6375',
@@ -16,6 +17,14 @@ export const useStyleStore = defineStore('style', () => {
         border: '#e5e4e7',
         codeBg: '#f3f0ff',
         headerBg: '#fff',
+        cardBg: '#fff',
+        shadow: 'rgba(179, 102, 255, 0.2)',
+      },
+      animation: {
+        cardHover: 'pixelHover',
+        floatElements: 'pixelFloat',
+        loading: 'pixelBlink',
+        cursor: 'pixelCursor',
       }
     },
     cute: {
@@ -23,6 +32,7 @@ export const useStyleStore = defineStore('style', () => {
       logo: '/logo-cute.png',
       colors: {
         accent: '#ff6b9d',
+        accentRgb: '255, 107, 157',
         accentBg: 'rgba(255, 107, 157, 0.1)',
         accentBorder: 'rgba(255, 107, 157, 0.5)',
         text: '#8b7b8b',
@@ -31,6 +41,14 @@ export const useStyleStore = defineStore('style', () => {
         border: '#ffd6e0',
         codeBg: '#fff0f5',
         headerBg: '#fff',
+        cardBg: '#fff',
+        shadow: 'rgba(255, 107, 157, 0.15)',
+      },
+      animation: {
+        cardHover: 'cuteBounce',
+        floatElements: 'cuteFloat',
+        loading: 'cutePulse',
+        cursor: 'cuteSparkle',
       }
     },
     qver: {
@@ -38,6 +56,7 @@ export const useStyleStore = defineStore('style', () => {
       logo: '/logo-qver.png',
       colors: {
         accent: '#7c6aff',
+        accentRgb: '124, 106, 255',
         accentBg: 'rgba(124, 106, 255, 0.1)',
         accentBorder: 'rgba(124, 106, 255, 0.5)',
         text: '#6b6375',
@@ -46,6 +65,14 @@ export const useStyleStore = defineStore('style', () => {
         border: '#e0dfff',
         codeBg: '#f4f3ff',
         headerBg: '#fff',
+        cardBg: 'rgba(255, 255, 255, 0.8)',
+        shadow: 'rgba(124, 106, 255, 0.1)',
+      },
+      animation: {
+        cardHover: 'qverSlide',
+        floatElements: 'qverFloat',
+        loading: 'qverGlow',
+        cursor: 'qverRipple',
       }
     }
   }
@@ -65,6 +92,7 @@ export const useStyleStore = defineStore('style', () => {
     const t = themes[name]
     const root = document.documentElement
     root.style.setProperty('--accent', t.colors.accent)
+    root.style.setProperty('--accent-rgb', t.colors.accentRgb)
     root.style.setProperty('--accent-bg', t.colors.accentBg)
     root.style.setProperty('--accent-border', t.colors.accentBorder)
     root.style.setProperty('--text', t.colors.text)
@@ -73,6 +101,8 @@ export const useStyleStore = defineStore('style', () => {
     root.style.setProperty('--border', t.colors.border)
     root.style.setProperty('--code-bg', t.colors.codeBg)
     root.style.setProperty('--header-bg', t.colors.headerBg)
+    root.style.setProperty('--card-bg', t.colors.cardBg)
+    root.style.setProperty('--shadow', t.colors.shadow)
     document.body.style.background = t.colors.bg
   }
 

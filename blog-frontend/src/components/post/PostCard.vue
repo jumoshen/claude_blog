@@ -6,7 +6,13 @@
       <span class="views">{{ post.views }} views</span>
     </div>
     <div class="tags">
-      <el-tag v-for="tag in post.tags" :key="tag" size="small">{{ tag }}</el-tag>
+      <el-tag
+        v-for="tag in post.tags"
+        :key="tag"
+        size="small"
+        class="tag-item"
+        @click.stop="$router.push({ path: '/', query: { tag } })"
+      >{{ tag }}</el-tag>
     </div>
     <p class="summary">{{ post.summary }}</p>
   </div>
@@ -26,19 +32,24 @@ const formatDate = (date) => {
 
 <style scoped>
 .post-card {
-  background: #fff;
-  border-radius: 8px;
-  padding: 20px;
+  background: var(--bg);
+  border-radius: 12px;
+  padding: 24px;
   margin-bottom: 20px;
   cursor: pointer;
-  transition: box-shadow 0.2s;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  transition: all 0.2s;
+  border: 1px solid var(--border);
 }
-.post-card:hover { box-shadow: 0 4px 16px rgba(0,0,0,0.15); }
-.title { margin: 0 0 10px; color: #333; }
-.meta { font-size: 14px; color: #999; margin-bottom: 10px; }
-.meta span { margin-right: 15px; }
-.tags { margin-bottom: 10px; }
-.tags .el-tag { margin-right: 5px; }
-.summary { color: #666; line-height: 1.6; }
+.post-card:hover {
+  border-color: var(--accent);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.08);
+}
+.title { margin: 0 0 12px; color: var(--text-h); font-size: 20px; font-weight: 600; }
+.meta { font-size: 13px; color: var(--text); margin-bottom: 12px; }
+.meta span { margin-right: 16px; }
+.tags { margin-bottom: 12px; display: flex; flex-wrap: wrap; gap: 6px; }
+.tag-item { cursor: pointer; transition: all 0.2s; }
+.tag-item:hover { transform: scale(1.05); }
+.summary { color: var(--text); line-height: 1.6; margin: 0; }
 </style>

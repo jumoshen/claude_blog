@@ -33,17 +33,39 @@ const formatDate = (date) => {
 
 <style scoped>
 .archives { max-width: 800px; margin: 0 auto; padding: 40px 20px; }
-.archives h1 { margin-bottom: 30px; }
-.year-section { margin-bottom: 30px; }
-.year { color: #409eff; margin-bottom: 15px; }
-.post-list { list-style: none; padding: 0; margin: 0; }
+.archives h1 { margin-bottom: 30px; color: var(--text-h); font-size: 32px; }
+.year-section { margin-bottom: 40px; }
+.year {
+  color: var(--accent);
+  margin-bottom: 20px;
+  font-size: 28px;
+  font-weight: 600;
+  padding-bottom: 10px;
+  border-bottom: 2px solid var(--accent);
+  display: inline-block;
+}
+.post-list { list-style: none; padding: 0; margin: 0; background: var(--bg); border-radius: 12px; overflow: hidden; }
 .post-list li {
   display: flex;
-  padding: 10px 0;
-  border-bottom: 1px solid #eee;
+  align-items: center;
+  padding: 14px 20px;
+  border-bottom: 1px solid var(--border);
   cursor: pointer;
+  transition: all 0.2s;
 }
-.post-list li:hover { color: #409eff; }
-.post-list .date { width: 80px; color: #999; font-size: 14px; }
-.post-list .title { flex: 1; }
+.post-list li:last-child { border-bottom: none; }
+.post-list li:hover { background: var(--accent-bg); padding-left: 28px; }
+.post-list .date {
+  width: 140px;
+  color: var(--text);
+  font-size: 13px;
+  font-family: var(--mono);
+  flex-shrink: 0;
+}
+.post-list .title {
+  flex: 1;
+  color: var(--text-h);
+  font-weight: 500;
+}
+.post-list li:hover .title { color: var(--accent); }
 </style>

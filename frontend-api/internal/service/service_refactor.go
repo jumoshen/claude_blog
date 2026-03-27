@@ -98,6 +98,28 @@ func (s *Service) ListPosts() ([]PostInfo, error) {
 	return result, nil
 }
 
+// ListPostsPaginated 分页获取已发布文章
+func (s *Service) ListPostsPaginated(tag string, page, pageSize int) ([]PostInfo, int64, error) {
+	posts, total, err := s.repo.ListPostsPaginated(tag, page, pageSize)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	result := make([]PostInfo, 0, len(posts))
+	for _, p := range posts {
+		result = append(result, PostInfo{
+			Slug:       p.Slug,
+			Title:      p.Title,
+			Date:       p.Date,
+			Tags:       strings.Split(p.Tags, ","),
+			Categories: strings.Split(p.Categories, ","),
+			Summary:    p.Summary,
+			Views:      p.Views,
+		})
+	}
+	return result, total, nil
+}
+
 // GetPost returns a single post by slug
 func (s *Service) GetPost(slug string) (*PostInfo, string, error) {
 	post, err := s.repo.GetPostBySlug(slug)

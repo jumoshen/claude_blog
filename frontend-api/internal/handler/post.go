@@ -2,6 +2,7 @@ package handler
 
 import (
 	"html/template"
+	"strconv"
 
 	"github.com/gin-gonic/gin"
 
@@ -23,39 +24,42 @@ func NewPostHandler(svc *service.Service, log *logger.Logger) *PostHandler {
 	}
 }
 
-// ListPosts returns all posts
-// @Summary Get all posts
-// @Description Returns a list of all blog posts
+// ListPosts returns posts with pagination
+// @Summary Get posts with pagination
+// @Description Returns a paginated list of blog posts
 // @Tags posts
 // @Produce json
+// @Param tag query string false "Filter by tag"
+// @Param page query int false "Page number" default(1)
+// @Param page_size query int false "Page size" default(10)
 // @Success 200 {object} response.Response{data=[]PostInfo}
 // @Router /api/v1/posts [get]
 func (h *PostHandler) ListPosts(c *gin.Context) {
 	filterTag := c.Query("tag")
+	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+	pageSize, _ := strconv.Atoi(c.DefaultQuery("page_size", "10"))
 
-	posts, err := h.svc.ListPosts()
+	if page < 1 {
+		page = 1
+	}
+	if pageSize < 1 || pageSize > 100 {
+		pageSize = 10
+	}
+
+	posts, total, err := h.svc.ListPostsPaginated(filterTag, page, pageSize)
 	if err != nil {
 		h.log.Error("Failed to list posts: %v", err)
 		response.InternalError(c, "Failed to load posts")
 		return
 	}
 
-	// Filter by tag if specified
-	if filterTag != "" {
-		var filtered []service.PostInfo
-		for _, p := range posts {
-			for _, tag := range p.Tags {
-				if tag == filterTag {
-					filtered = append(filtered, p)
-					break
-				}
-			}
-		}
-		posts = filtered
-	}
-
-	h.log.Info("ListPosts: count=%d, filter=%s", len(posts), filterTag)
-	response.Success(c, posts)
+	h.log.Info("ListPosts: page=%d, page_size=%d, total=%d, tag=%s", page, pageSize, total, filterTag)
+	response.Success(c, gin.H{
+		"list":      posts,
+		"total":     total,
+		"page":      page,
+		"page_size": pageSize,
+	})
 }
 
 // GetPost returns a single post by slug

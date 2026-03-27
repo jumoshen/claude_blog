@@ -1,5 +1,7 @@
 # config
 frontend-api/config.yaml
+frontend-api/config.local.yaml
+claude-blog-admin/blog-admin-backend/config.local.yaml
 
 # logs
 logs/

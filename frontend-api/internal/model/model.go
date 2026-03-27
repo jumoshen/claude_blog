@@ -25,6 +25,7 @@ type Post struct {
 	Summary    string `gorm:"type:text"`
 	Content    string `gorm:"type:longtext"`
 	Views      int64  `gorm:"default:0"`
+	Status     int    `gorm:"default:1;index"` // 0=草稿 1=已发布 2=下架
 }
 
 type Visit struct {

@@ -2,6 +2,7 @@ package config
 
 import (
 	"fmt"
+	"os"
 	"strings"
 
 	"github.com/spf13/viper"
@@ -77,13 +78,17 @@ type JWTConfig struct {
 func Load(configPath string) (*Config, error) {
 	v := viper.New()
 
-	// Set config file
-	v.SetConfigFile(configPath)
-	v.SetConfigType("yaml")
-
 	// Enable environment variable override
 	v.AutomaticEnv()
 	v.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
+
+	// Determine config file based on APP_ENV
+	v.SetConfigType("yaml")
+	if os.Getenv("APP_ENV") == "local" {
+		v.SetConfigFile("config.local.yaml")
+	} else {
+		v.SetConfigFile(configPath)
+	}
 
 	// Read config file
 	if err := v.ReadInConfig(); err != nil {

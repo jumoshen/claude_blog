@@ -61,10 +61,35 @@ func (r *Repository) GetRedis() *redis.Client {
 // Post operations
 func (r *Repository) ListPosts() ([]model.Post, error) {
 	var posts []model.Post
-	if err := r.db.Order("date desc").Find(&posts).Error; err != nil {
+	if err := r.db.Where("status = 1").Order("date desc").Find(&posts).Error; err != nil {
 		return nil, err
 	}
 	return posts, nil
+}
+
+// ListPostsPaginated 分页获取已发布文章
+func (r *Repository) ListPostsPaginated(tag string, page, pageSize int) ([]model.Post, int64, error) {
+	var posts []model.Post
+	var total int64
+
+	query := r.db.Model(&model.Post{}).Where("status = 1")
+
+	if tag != "" {
+		query = query.Where("tags LIKE ?", "%"+tag+"%")
+	}
+
+	// Count total
+	if err := query.Count(&total).Error; err != nil {
+		return nil, 0, err
+	}
+
+	// Get paginated results
+	offset := (page - 1) * pageSize
+	if err := query.Order("date desc").Offset(offset).Limit(pageSize).Find(&posts).Error; err != nil {
+		return nil, 0, err
+	}
+
+	return posts, total, nil
 }
 
 func (r *Repository) GetPostBySlug(slug string) (*model.Post, error) {
@@ -130,10 +155,10 @@ func (r *Repository) IsBlacklisted(ctx context.Context, jti string) bool {
 	return result > 0
 }
 
-// GetAllTags 获取所有标签及其文章数量
+// GetAllTags 获取所有标签及其文章数量（仅已发布文章，使用 SQL 统计）
 func (r *Repository) GetAllTags() (map[string]int, error) {
 	var posts []model.Post
-	if err := r.db.Order("date desc").Find(&posts).Error; err != nil {
+	if err := r.db.Select("tags").Where("status = 1").Find(&posts).Error; err != nil {
 		return nil, err
 	}
 
@@ -150,10 +175,10 @@ func (r *Repository) GetAllTags() (map[string]int, error) {
 	return tagCount, nil
 }
 
-// GetAllCategories 获取所有分类及其文章数量
+// GetAllCategories 获取所有分类及其文章数量（仅已发布文章）
 func (r *Repository) GetAllCategories() (map[string]int, error) {
 	var posts []model.Post
-	if err := r.db.Order("date desc").Find(&posts).Error; err != nil {
+	if err := r.db.Select("categories").Where("status = 1").Find(&posts).Error; err != nil {
 		return nil, err
 	}
 

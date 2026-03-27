@@ -12,17 +12,29 @@
 
         <transition-group name="list" tag="div" class="posts-wrapper">
           <PostCard
-            v-for="(post, index) in filteredPosts"
+            v-for="(post, index) in posts"
             :key="post.slug"
             :post="post"
-            :style="{ '--delay': index * 0.1 + 's' }"
+            :style="{ '--delay': index * 0.05 + 's' }"
             class="post-item"
           />
         </transition-group>
 
-        <div v-if="filteredPosts.length === 0" class="empty">
+        <!-- 加载更多触发器 -->
+        <div ref="loadMoreTrigger" class="load-more-trigger"></div>
+
+        <div v-if="loading && (!posts || posts.length === 0)" class="loading">
+          <span class="loading-icon">⏳</span>
+          <p>加载中...</p>
+        </div>
+
+        <div v-else-if="!posts || posts.length === 0" class="empty">
           <span class="empty-icon">📭</span>
           <p>暂无文章</p>
+        </div>
+
+        <div v-else-if="!hasMore" class="no-more">
+          <span>— 已加载全部 —</span>
         </div>
       </div>
       <aside class="sidebar">
@@ -34,7 +46,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import api from '../api'
 import PostCard from '../components/post/PostCard.vue'
@@ -48,13 +60,46 @@ const posts = ref([])
 const tags = ref({})
 const categories = ref({})
 const styleStore = useStyleStore()
+const loading = ref(false)
+const page = ref(1)
+const pageSize = ref(10)
+const total = ref(0)
+const hasMore = computed(() => (posts.value?.length || 0) < total.value)
+const loadMoreTrigger = ref(null)
+let observer = null
 
 const activeTag = computed(() => route.query.tag || '')
 
-const filteredPosts = computed(() => {
-  if (!activeTag.value) return posts.value
-  return posts.value.filter(p => p.tags && p.tags.includes(activeTag.value))
-})
+const fetchPosts = async (reset = false) => {
+  if (loading.value) return
+  if (!reset && !hasMore.value) return
+
+  loading.value = true
+  try {
+    const res = await api.getPosts({
+      page: reset ? 1 : page.value,
+      page_size: pageSize.value,
+      tag: activeTag.value || undefined
+    })
+    if (res.code === 0 && res.data) {
+      // 兼容新旧两种 API 格式
+      const list = res.data.list || (Array.isArray(res.data) ? res.data : [])
+      const totalCount = res.data.total ?? (Array.isArray(res.data) ? res.data.length : 0)
+      if (reset) {
+        posts.value = list
+        page.value = 2
+      } else {
+        posts.value = [...posts.value, ...list]
+        page.value++
+      }
+      total.value = totalCount
+    }
+  } catch (e) {
+    console.error('Failed to fetch posts:', e)
+  } finally {
+    loading.value = false
+  }
+}
 
 const handleTagClick = (tag) => {
   router.push({ path: '/', query: { tag } })
@@ -64,15 +109,42 @@ const clearTag = () => {
   router.push({ path: '/', query: {} })
 }
 
+// 监听 tag 变化，重新加载
+let initialized = false
+watch(activeTag, () => {
+  if (initialized) {
+    fetchPosts(true)
+  }
+})
+
+// 设置滚动加载
 onMounted(async () => {
-  const [postsRes, tagsRes, categoriesRes] = await Promise.all([
-    api.getPosts(),
+  const [tagsRes, categoriesRes] = await Promise.all([
     api.getTags(),
     api.getCategories(),
   ])
-  if (postsRes.code === 0) posts.value = postsRes.data
   if (tagsRes.code === 0) tags.value = tagsRes.data
   if (categoriesRes.code === 0) categories.value = categoriesRes.data
+
+  await fetchPosts(true)
+  initialized = true
+
+  // 滚动加载
+  observer = new IntersectionObserver((entries) => {
+    if (entries[0].isIntersecting && !loading.value && hasMore.value) {
+      fetchPosts(false)
+    }
+  }, { threshold: 0.1 })
+
+  if (loadMoreTrigger.value) {
+    observer.observe(loadMoreTrigger.value)
+  }
+})
+
+onUnmounted(() => {
+  if (observer) {
+    observer.disconnect()
+  }
 })
 </script>
 
@@ -178,6 +250,36 @@ onMounted(async () => {
 }
 .fade-enter-from, .fade-leave-to {
   opacity: 0;
+}
+
+.load-more-trigger {
+  height: 20px;
+  margin: 20px 0;
+}
+
+.loading {
+  text-align: center;
+  padding: 40px 20px;
+  color: var(--text);
+}
+
+.loading-icon {
+  font-size: 32px;
+  display: block;
+  margin-bottom: 12px;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.no-more {
+  text-align: center;
+  padding: 20px;
+  color: var(--text);
+  opacity: 0.6;
+  font-size: 14px;
 }
 
 @media (max-width: 768px) {

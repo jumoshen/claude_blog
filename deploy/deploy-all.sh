@@ -50,17 +50,17 @@ main() {
     # Step 1: 代码同步
     log_step "1. 同步代码到服务器..."
 
-    # 同步 C端
+    # 同步 C端 (排除 config.yaml)
     log "   同步 C端代码..."
     ssh_cmd "mkdir -p $SERVER_DEPLOY_PATH"
-    sync_dir "$PROJECT_DIR/frontend-api/" "$SERVER_DEPLOY_PATH/frontend-api/"
-    sync_dir "$PROJECT_DIR/blog-frontend/" "$SERVER_DEPLOY_PATH/blog-frontend/"
+    rsync -avz --delete -e ssh --exclude='config.yaml' "$PROJECT_DIR/frontend-api/" "$SERVER_USER@$SERVER_HOST:$SERVER_DEPLOY_PATH/frontend-api/"
+    rsync -avz --delete -e ssh "$PROJECT_DIR/blog-frontend/" "$SERVER_USER@$SERVER_HOST:$SERVER_DEPLOY_PATH/blog-frontend/"
 
-    # 同步 B端
+    # 同步 B端 (排除 config.yaml)
     log "   同步 B端代码..."
     ssh_cmd "mkdir -p $SERVER_DEPLOY_PATH/claude-blog-admin"
-    sync_dir "$PROJECT_DIR/claude-blog-admin/blog-admin-backend/" "$SERVER_DEPLOY_PATH/claude-blog-admin/blog-admin-backend/"
-    sync_dir "$PROJECT_DIR/claude-blog-admin/blog-admin-frontend/" "$SERVER_DEPLOY_PATH/claude-blog-admin/blog-admin-frontend/"
+    rsync -avz --delete -e ssh --exclude='config.yaml' "$PROJECT_DIR/claude-blog-admin/blog-admin-backend/" "$SERVER_USER@$SERVER_HOST:$SERVER_DEPLOY_PATH/claude-blog-admin/blog-admin-backend/"
+    rsync -avz --delete -e ssh "$PROJECT_DIR/claude-blog-admin/blog-admin-frontend/" "$SERVER_USER@$SERVER_HOST:$SERVER_DEPLOY_PATH/claude-blog-admin/blog-admin-frontend/"
 
     # 同步部署配置
     log "   同步部署配置..."

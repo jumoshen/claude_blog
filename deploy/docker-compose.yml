@@ -47,7 +47,7 @@ services:
   # =====================
   frontend-api:
     build:
-      context: ../frontend-api
+      context: ./frontend-api
       dockerfile: Dockerfile
     container_name: cc-blog-api
     image: jumoshen/claude_blog_api:latest
@@ -58,7 +58,7 @@ services:
       - GOPROXY=https://goproxy.cn,direct
       - APP_ENV=production
     volumes:
-      - ../frontend-api/config.yaml:/app/config.yaml
+      - ./frontend-api/config.yaml:/app/config.yaml
       - content_data:/app/content
     depends_on:
       - mysql
@@ -69,7 +69,7 @@ services:
 
   blog-frontend:
     build:
-      context: ../blog-frontend
+      context: ./blog-frontend
       dockerfile: Dockerfile
     container_name: cc-blog-web
     image: jumoshen/claude_blog_frontend:latest
@@ -84,7 +84,7 @@ services:
   # =====================
   admin-backend:
     build:
-      context: ../claude-blog-admin/blog-admin-backend
+      context: ./claude-blog-admin/blog-admin-backend
       dockerfile: Dockerfile
     container_name: cc-blog-admin-backend
     image: jumoshen/claude_blog_admin_backend:latest
@@ -100,7 +100,7 @@ services:
       - APP_ENV=production
       - GOPROXY=https://goproxy.cn,direct
     volumes:
-      - ../claude-blog-admin/blog-admin-backend/config.yaml:/app/config.yaml
+      - ./claude-blog-admin/blog-admin-backend/config.yaml:/app/config.yaml
     depends_on:
       - mysql
       - minio
@@ -110,7 +110,7 @@ services:
 
   admin-frontend:
     build:
-      context: ../claude-blog-admin/blog-admin-frontend
+      context: ./claude-blog-admin/blog-admin-frontend
       dockerfile: Dockerfile
     container_name: cc-blog-admin-frontend
     image: jumoshen/claude_blog_admin_frontend:latest

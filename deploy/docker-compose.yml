@@ -1,49 +1,150 @@
 # Claude Blog 生产环境部署
-version: '3'
-
 services:
-  # C端前端
-  blog-frontend:
-    image: jumoshen/claude_blog_frontend:latest
-    container_name: cc-blog-web
+  # =====================
+  # 基础设施服务
+  # =====================
+  mysql:
+    image: mysql:8
+    container_name: cc-blog-mysql
+    environment:
+      - MYSQL_ROOT_PASSWORD=Blog2024Secure
+      - MYSQL_DATABASE=blog
+    ports:
+      - "3308:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    networks:
+      - blogdeploy_blog-network
     restart: always
+
+  redis:
+    image: redis:7-alpine
+    container_name: cc-blog-redis
+    ports:
+      - "6381:6379"
+    networks:
+      - blogdeploy_blog-network
+    restart: always
+
+  minio:
+    image: minio/minio:latest
+    container_name: cc-blog-minio
+    environment:
+      - MINIO_ROOT_USER=admin
+      - MINIO_ROOT_PASSWORD=BlogMinIO2024
+    ports:
+      - "9002:9000"
+      - "9003:9001"
+    volumes:
+      - minio_data:/data
+    networks:
+      - blogdeploy_blog-network
+    command: server /data --console-address ":9001"
+    restart: always
+
+  # =====================
+  # C端服务
+  # =====================
+  frontend-api:
+    build:
+      context: ../frontend-api
+      dockerfile: Dockerfile
+    container_name: cc-blog-api
+    image: jumoshen/claude_blog_api:latest
+    ports:
+      - "8080:8080"
+    environment:
+      - GIN_MODE=release
+      - GOPROXY=https://goproxy.cn,direct
+      - APP_ENV=production
+    volumes:
+      - ../frontend-api/config.yaml:/app/config.yaml
+      - content_data:/app/content
+    depends_on:
+      - mysql
+      - redis
+    networks:
+      - blogdeploy_blog-network
+    restart: always
+
+  blog-frontend:
+    build:
+      context: ../blog-frontend
+      dockerfile: Dockerfile
+    container_name: cc-blog-web
+    image: jumoshen/claude_blog_frontend:latest
     ports:
       - "3000:80"
     networks:
-      - blog-network
-
-  # C端 API
-  blog-api:
-    image: jumoshen/claude_blog_api:latest
-    container_name: cc-blog-api
+      - blogdeploy_blog-network
     restart: always
+
+  # =====================
+  # B端服务
+  # =====================
+  admin-backend:
+    build:
+      context: ../claude-blog-admin/blog-admin-backend
+      dockerfile: Dockerfile
+    container_name: cc-blog-admin-backend
+    image: jumoshen/claude_blog_admin_backend:latest
     ports:
-      - "8080:8080"
+      - "8082:8080"
+    environment:
+      - TZ=Asia/Shanghai
+      - MINIO_ENDPOINT=minio:9000
+      - MINIO_ACCESS_KEY=admin
+      - MINIO_SECRET_KEY=BlogMinIO2024
+      - MINIO_BUCKET=uploads
+      - MINIO_USE_SSL=false
+      - APP_ENV=production
+      - GOPROXY=https://goproxy.cn,direct
     volumes:
-      - /home/blog-deploy/content:/app/content
+      - ../claude-blog-admin/blog-admin-backend/config.yaml:/app/config.yaml
+    depends_on:
+      - mysql
+      - minio
     networks:
-      - blog-network
-
-  # B端前端
-  blog-admin-frontend:
-    image: jumoshen/claude_blog_admin_frontend:latest
-    container_name: cc-blog-admin-web
+      - blogdeploy_blog-network
     restart: always
+
+  admin-frontend:
+    build:
+      context: ../claude-blog-admin/blog-admin-frontend
+      dockerfile: Dockerfile
+    container_name: cc-blog-admin-frontend
+    image: jumoshen/claude_blog_admin_frontend:latest
     ports:
       - "3001:80"
     networks:
-      - blog-network
-
-  # B端后端
-  blog-admin-backend:
-    image: jumoshen/claude_blog_admin_backend:latest
-    container_name: cc-blog-admin-backend
+      - blogdeploy_blog-network
     restart: always
+
+  # =====================
+  # Nginx 反向代理 (SSL)
+  # =====================
+  nginx-proxy:
+    image: nginx:alpine
+    container_name: nginx-proxy
     ports:
-      - "8082:8080"
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - /etc/letsencrypt:/etc/letsencrypt:ro
     networks:
-      - blog-network
+      - blogdeploy_blog-network
+    restart: always
+    depends_on:
+      - blog-frontend
+      - admin-frontend
 
 networks:
-  blog-network:
-    driver: bridge
+  blogdeploy_blog-network:
+    name: blogdeploy_blog-network
+    external: true
+
+volumes:
+  mysql_data:
+  minio_data:
+  content_data:

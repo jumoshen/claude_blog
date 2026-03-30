@@ -96,11 +96,13 @@ main() {
     log "   构建 B端 Frontend..."
     ssh_cmd "cd $SERVER_DEPLOY_PATH/claude-blog-admin/blog-admin-frontend && docker build -t ${REGISTRY}/${PROJECT_PREFIX}/claude_blog_admin_frontend:latest ."
 
-    # Step 4: 停止旧服务
-    log_step "4. 停止旧服务..."
+    # Step 4: 停止并删除所有旧服务
+    log_step "4. 停止并删除旧服务..."
+    # 停止并删除 docker compose 创建的容器
     ssh_cmd "cd $SERVER_DEPLOY_PATH && docker compose down 2>/dev/null || true"
-    ssh_cmd "docker stop cc-blog-api cc-blog-web cc-blog-admin-backend cc-blog-admin-frontend 2>/dev/null || true"
-    ssh_cmd "docker rm cc-blog-api cc-blog-web cc-blog-admin-backend cc-blog-admin-frontend 2>/dev/null || true"
+    # 停止并删除所有 cc-blog 相关容器
+    ssh_cmd "docker ps -a --format '{{.Names}}' | grep -E '^cc-blog|^nginx-proxy' | xargs -r docker stop 2>/dev/null || true"
+    ssh_cmd "docker ps -a --format '{{.Names}}' | grep -E '^cc-blog|^nginx-proxy' | xargs -r docker rm 2>/dev/null || true"
 
     # Step 5: 启动新服务
     log_step "5. 启动服务..."

@@ -1,12 +1,10 @@
-# 生产环境 docker-compose
-# 使用预编译镜像，只需在 CI/CD 或本地构建后推送镜像到镜像仓库
-
-version: '3.8'
+# Claude Blog 生产环境部署
+version: '3'
 
 services:
   # C端前端
   blog-frontend:
-    image: ${REGISTRY:-docker.io}/jumoshen/claude_blog_frontend:latest
+    image: jumoshen/claude_blog_frontend:latest
     container_name: cc-blog-web
     restart: always
     ports:
@@ -16,33 +14,19 @@ services:
 
   # C端 API
   blog-api:
-    image: ${REGISTRY:-docker.io}/jumoshen/claude_blog_api:latest
+    image: jumoshen/claude_blog_api:latest
     container_name: cc-blog-api
     restart: always
     ports:
       - "8080:8080"
-    environment:
-      - DB_HOST=${DB_HOST}
-      - DB_PORT=${DB_PORT:-3306}
-      - DB_USER=${DB_USER}
-      - DB_PASSWORD=${DB_PASSWORD}
-      - DB_NAME=${DB_NAME:-blog}
-      - REDIS_HOST=${REDIS_HOST:-redis}
-      - REDIS_PORT=${REDIS_PORT:-6379}
-      - JWT_SECRET=${JWT_SECRET}
-      - MINIO_ENDPOINT=${MINIO_ENDPOINT:-minio:9000}
-      - MINIO_ACCESS_KEY=${MINIO_ACCESS_KEY}
-      - MINIO_SECRET_KEY=${MINIO_SECRET_KEY}
-      - MINIO_BUCKET=${MINIO_BUCKET:-uploads}
-    depends_on:
-      - mysql
-      - redis
+    volumes:
+      - /home/blog-deploy/content:/app/content
     networks:
       - blog-network
 
   # B端前端
   blog-admin-frontend:
-    image: ${REGISTRY:-docker.io}/jumoshen/claude_blog_admin_frontend:latest
+    image: jumoshen/claude_blog_admin_frontend:latest
     container_name: cc-blog-admin-web
     restart: always
     ports:
@@ -52,78 +36,14 @@ services:
 
   # B端后端
   blog-admin-backend:
-    image: ${REGISTRY:-docker.io}/jumoshen/claude_blog_admin_backend:latest
+    image: jumoshen/claude_blog_admin_backend:latest
     container_name: cc-blog-admin-backend
     restart: always
     ports:
       - "8082:8080"
-    environment:
-      - DB_HOST=${DB_HOST}
-      - DB_PORT=${DB_PORT:-3306}
-      - DB_USER=${DB_USER}
-      - DB_PASSWORD=${DB_PASSWORD}
-      - DB_NAME=${DB_NAME:-blog}
-      - JWT_SECRET=${JWT_SECRET}
-      - MINIO_ENDPOINT=${MINIO_ENDPOINT:-minio:9000}
-      - MINIO_ACCESS_KEY=${MINIO_ACCESS_KEY}
-      - MINIO_SECRET_KEY=${MINIO_SECRET_KEY}
-      - MINIO_BUCKET=${MINIO_BUCKET:-uploads}
-    depends_on:
-      - mysql
-    networks:
-      - blog-network
-
-  # MySQL
-  mysql:
-    image: mysql:8
-    container_name: cc-blog-mysql
-    restart: always
-    ports:
-      - "3307:3306"
-    environment:
-      - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}
-      - MYSQL_DATABASE=${DB_NAME:-blog}
-      - MYSQL_USER=${DB_USER}
-      - MYSQL_PASSWORD=${DB_PASSWORD}
-    volumes:
-      - mysql-data:/var/lib/mysql
-    networks:
-      - blog-network
-
-  # Redis
-  redis:
-    image: redis:7-alpine
-    container_name: cc-blog-redis
-    restart: always
-    ports:
-      - "6380:6379"
-    volumes:
-      - redis-data:/data
-    networks:
-      - blog-network
-
-  # MinIO 文件服务
-  minio:
-    image: minio/minio:latest
-    container_name: cc-blog-minio
-    restart: always
-    ports:
-      - "9000:9000"
-      - "9001:9001"
-    environment:
-      - MINIO_ROOT_USER=${MINIO_ACCESS_KEY}
-      - MINIO_ROOT_PASSWORD=${MINIO_SECRET_KEY}
-    volumes:
-      - minio-data:/data
-    command: server /data --console-address ":9001"
     networks:
       - blog-network
 
 networks:
   blog-network:
     driver: bridge
-
-volumes:
-  mysql-data:
-  redis-data:
-  minio-data:

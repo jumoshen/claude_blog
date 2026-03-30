@@ -1,0 +1,47 @@
+server:
+  host: "0.0.0.0"
+  port: 8080
+
+site:
+  title: "Jumoshen"
+  author: "Hui Liang"
+  description: "巨魔深，一个属于自己的博客，在这里你可以分享自己的知识，一加一永远大于二"
+  beian: "京ICP备16019475号-1"
+  keywords: "巨魔深,巨魔客,巨魔,jumoshen,blog_jumo"
+
+database:
+  host: "cc-blog-mysql"
+  port: 3306
+  user: "blog"
+  password: "Blog2024Secure"
+  database: "blog"
+
+redis:
+  host: "cc-blog-redis"
+  port: 6379
+  password: ""
+  db: 0
+
+log:
+  level: "info"
+  path: "./logs"
+  filename: "blog"
+  max_size: 100
+  max_backups: 30
+  max_age: 7
+  compress: true
+  console: true
+
+github:
+  client_id: "Iv23livioRdzj1FVvMXh"
+  client_secret: "e2693ece806126b3a697de321725168013bd7fb9"
+  callback_url: "https://jumoshen.cn/api/v1/auth/callback"
+
+content:
+  path: "/app/content"
+  base_url: "https://jumoshen.cn"
+
+jwt:
+  secret: "JumoshenBlogJWT2024Secret"
+  expiration: 604800
+  issuer: "frontend-api"

@@ -1,0 +1,23 @@
+server:
+  port: 8080
+  mode: release
+
+database:
+  host: cc-blog-mysql
+  port: 3306
+  username: blog
+  password: "Blog2024Secure"
+  name: blog
+  charset: utf8mb4
+
+jwt:
+  secret: JumoshenBlogAdminJWT2024Secret
+  expire_hours: 24
+
+minio:
+  endpoint: cc-blog-minio:9000
+  access_key: blogadmin
+  secret_key: "BlogMinIO2024"
+  bucket: uploads
+  base_url: http://cc-blog-minio:9000
+  use_ssl: false

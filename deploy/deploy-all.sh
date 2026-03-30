@@ -8,7 +8,6 @@ set -e
 
 # 配置
 DEPLOY_DIR="$(cd "$(dirname "$0")" && pwd)"
-PROJECT_DIR="$(dirname "$DEPLOY_DIR")"
 SERVER_USER=${SERVER_USER:-root}
 SERVER_HOST=${SERVER_HOST:-47.120.0.121}
 SERVER_DEPLOY_PATH="/home/blog-deploy/claude_blog"
@@ -34,49 +33,27 @@ ssh_cmd() {
     ssh -o StrictHostKeyChecking=no "$SERVER_USER@$SERVER_HOST" "$1"
 }
 
-# 同步目录到服务器
-sync_dir() {
-    local local_path="$1"
-    local remote_path="$2"
-    rsync -avz --delete -e ssh "$local_path" "$SERVER_USER@$SERVER_HOST:$remote_path"
-}
-
 # 主流程
 main() {
     log "=========================================="
     log " Claude Blog 一键部署"
     log "=========================================="
 
-    # Step 1: 代码同步
-    log_step "1. 同步代码到服务器..."
+    # Step 1: Git 拉取最新代码
+    log_step "1. 拉取最新代码..."
+    ssh_cmd "cd $SERVER_DEPLOY_PATH && git fetch origin && git checkout main && git pull origin main"
 
-    # 同步 C端 (排除 config.yaml)
-    log "   同步 C端代码..."
-    ssh_cmd "mkdir -p $SERVER_DEPLOY_PATH"
-    rsync -avz --delete -e ssh --exclude='config.yaml' "$PROJECT_DIR/frontend-api/" "$SERVER_USER@$SERVER_HOST:$SERVER_DEPLOY_PATH/frontend-api/"
-    rsync -avz --delete -e ssh "$PROJECT_DIR/blog-frontend/" "$SERVER_USER@$SERVER_HOST:$SERVER_DEPLOY_PATH/blog-frontend/"
-
-    # 同步 B端 (排除 config.yaml)
-    log "   同步 B端代码..."
-    ssh_cmd "mkdir -p $SERVER_DEPLOY_PATH/claude-blog-admin"
-    rsync -avz --delete -e ssh --exclude='config.yaml' "$PROJECT_DIR/claude-blog-admin/blog-admin-backend/" "$SERVER_USER@$SERVER_HOST:$SERVER_DEPLOY_PATH/claude-blog-admin/blog-admin-backend/"
-    rsync -avz --delete -e ssh "$PROJECT_DIR/claude-blog-admin/blog-admin-frontend/" "$SERVER_USER@$SERVER_HOST:$SERVER_DEPLOY_PATH/claude-blog-admin/blog-admin-frontend/"
-
-    # 同步部署配置
-    log "   同步部署配置..."
-    sync_dir "$DEPLOY_DIR/docker-compose.yml" "$SERVER_DEPLOY_PATH/"
-    sync_dir "$DEPLOY_DIR/nginx.conf" "$SERVER_DEPLOY_PATH/"
-
-    # Step 2: 复制配置文件
+    # Step 2: 复制配置文件 (从 deploy 目录)
     log_step "2. 配置服务..."
-
     # C端 API 配置
     log "   配置 C端 API..."
-    ssh_cmd "cp $DEPLOY_DIR/config-api.yaml $SERVER_DEPLOY_PATH/frontend-api/config.yaml 2>/dev/null || true"
-
+    ssh_cmd "cp $SERVER_DEPLOY_PATH/deploy/config-api.yaml $SERVER_DEPLOY_PATH/frontend-api/config.yaml"
     # B端 Backend 配置
     log "   配置 B端 Backend..."
-    ssh_cmd "cp $DEPLOY_DIR/config-admin.yaml $SERVER_DEPLOY_PATH/claude-blog-admin/blog-admin-backend/config.yaml 2>/dev/null || true"
+    ssh_cmd "cp $SERVER_DEPLOY_PATH/deploy/config-admin.yaml $SERVER_DEPLOY_PATH/claude-blog-admin/blog-admin-backend/config.yaml"
+    # Nginx 配置
+    log "   配置 Nginx..."
+    ssh_cmd "cp $SERVER_DEPLOY_PATH/deploy/nginx.conf $SERVER_DEPLOY_PATH/nginx.conf"
 
     # Step 3: 构建镜像
     log_step "3. 构建 Docker 镜像..."
@@ -98,9 +75,7 @@ main() {
 
     # Step 4: 停止并删除所有旧服务
     log_step "4. 停止并删除旧服务..."
-    # 停止并删除 docker compose 创建的容器
     ssh_cmd "cd $SERVER_DEPLOY_PATH && docker compose down 2>/dev/null || true"
-    # 停止并删除所有 cc-blog 相关容器
     ssh_cmd "docker ps -a --format '{{.Names}}' | grep -E '^cc-blog|^nginx-proxy' | xargs -r docker stop 2>/dev/null || true"
     ssh_cmd "docker ps -a --format '{{.Names}}' | grep -E '^cc-blog|^nginx-proxy' | xargs -r docker rm 2>/dev/null || true"
 
@@ -112,14 +87,18 @@ main() {
     log_step "6. 等待服务就绪..."
     sleep 5
 
-    # Step 7: 检查状态
-    log_step "7. 检查服务状态..."
+    # Step 7: 确保 MySQL 用户存在
+    log_step "7. 初始化数据库..."
+    ssh_cmd "docker exec cc-blog-mysql mysql -u root -pBlog2024Secure -e \"CREATE USER IF NOT EXISTS 'blog'@'%' IDENTIFIED BY 'Blog2024Secure'; GRANT ALL PRIVILEGES ON blog.* TO 'blog'@'%'; FLUSH PRIVILEGES;\" 2>/dev/null || true"
+
+    # Step 8: 检查状态
+    log_step "8. 检查服务状态..."
     echo ""
     ssh_cmd "docker ps --format 'table {{.Names}}\t{{.Status}}' | grep -E 'cc-blog|nginx'"
     echo ""
 
-    # Step 8: 测试访问
-    log_step "8. 测试访问..."
+    # Step 9: 测试访问
+    log_step "9. 测试访问..."
     HTTP_CODE=$(ssh_cmd "curl -s -o /dev/null -w '%{http_code}' http://localhost:3000/")
     if [ "$HTTP_CODE" = "200" ]; then
         log "   C端前台: http://jumoshen.cn - OK"

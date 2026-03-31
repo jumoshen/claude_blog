@@ -178,6 +178,51 @@ func (h *PostHandler) GetCategories(c *gin.Context) {
 	response.Success(c, categories)
 }
 
+// GetSitemap generates XML sitemap
+// @Summary Get sitemap
+// @Description Returns XML sitemap for SEO
+// @Tags posts
+// @Produce xml
+// @Success 200 {string} string
+// @Router /api/v1/sitemap.xml [get]
+func (h *PostHandler) GetSitemap(c *gin.Context) {
+	posts, err := h.svc.GetAllPostsForSitemap()
+	if err != nil {
+		h.log.Error("Failed to get posts for sitemap: %v", err)
+		response.InternalError(c, "Failed to generate sitemap")
+		return
+	}
+
+	baseURL := "https://jumoshen.cn"
+
+	xml := `<?xml version="1.0" encoding="UTF-8"?>`
+	xml += `<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">`
+
+	// Homepage
+	xml += `<url><loc>` + baseURL + `/</loc><changefreq>weekly</changefreq><priority>1.0</priority></url>`
+
+	// Archives
+	xml += `<url><loc>` + baseURL + `/archives</loc><changefreq>weekly</changefreq><priority>0.8</priority></url>`
+
+	// About
+	xml += `<url><loc>` + baseURL + `/about</loc><changefreq>monthly</changefreq><priority>0.5</priority></url>`
+
+	// Posts
+	for _, post := range posts {
+		xml += `<url>`
+		xml += `<loc>` + baseURL + `/post/` + post.Slug + `</loc>`
+		xml += `<lastmod>` + post.Date.Format("2006-01-02") + `</lastmod>`
+		xml += `<changefreq>monthly</changefreq>`
+		xml += `<priority>0.9</priority>`
+		xml += `</url>`
+	}
+
+	xml += `</urlset>`
+
+	c.Header("Content-Type", "application/xml")
+	c.String(200, xml)
+}
+
 type PostInfo struct {
 	Slug       string `json:"slug"`
 	Title      string `json:"title"`

@@ -373,6 +373,11 @@ func (s *Service) GetAllCategories() (map[string]int, error) {
 	return s.repo.GetAllCategories()
 }
 
+// GetAllPostsForSitemap returns all posts for sitemap generation
+func (s *Service) GetAllPostsForSitemap() ([]PostInfo, error) {
+	return s.ListPosts()
+}
+
 // User operations
 func (s *Service) SaveUser(user *model.User) error {
 	return s.repo.GetDB().Save(user).Error

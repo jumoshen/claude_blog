@@ -100,6 +100,7 @@ func main() {
 		v1.GET("/about", postHandler.GetAbout)
 		v1.GET("/tags", postHandler.GetTags)
 		v1.GET("/categories", postHandler.GetCategories)
+		v1.GET("/sitemap.xml", postHandler.GetSitemap)
 
 		// Auth routes
 		auth := v1.Group("/auth")

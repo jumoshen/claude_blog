@@ -5,7 +5,10 @@ export const useStyleStore = defineStore('style', () => {
   const themes = {
     pixel: {
       name: '像素风',
+      tagline: '8-BIT RETRO',
       logo: '/logo-pixel.png',
+      icon: '🎮',
+      preview: 'linear-gradient(135deg, #b366ff 0%, #7c3aed 100%)',
       colors: {
         accent: '#b366ff',
         accentRgb: '179, 102, 255',
@@ -25,11 +28,17 @@ export const useStyleStore = defineStore('style', () => {
         floatElements: 'pixelFloat',
         loading: 'pixelBlink',
         cursor: 'pixelCursor',
-      }
+      },
+      cardStyle: 'pixelated',
+      fontDisplay: 'Press Start 2P, monospace',
+      fontBody: '"Noto Sans SC", "Microsoft YaHei", sans-serif',
     },
     cute: {
       name: '可爱风',
+      tagline: 'SWEETY DAYS',
       logo: '/logo-cute.png',
+      icon: '🌸',
+      preview: 'linear-gradient(135deg, #ff6b9d 0%, #ffa8c5 100%)',
       colors: {
         accent: '#ff6b9d',
         accentRgb: '255, 107, 157',
@@ -49,11 +58,17 @@ export const useStyleStore = defineStore('style', () => {
         floatElements: 'cuteFloat',
         loading: 'cutePulse',
         cursor: 'cuteSparkle',
-      }
+      },
+      cardStyle: 'rounded',
+      fontDisplay: 'Fredoka, cursive',
+      fontBody: 'Nunito, sans-serif',
     },
     qver: {
       name: 'Q版',
+      tagline: 'CHILL VIBES',
       logo: '/logo-qver.png',
+      icon: '⚡',
+      preview: 'linear-gradient(135deg, #7c6aff 0%, #a78bfa 100%)',
       colors: {
         accent: '#7c6aff',
         accentRgb: '124, 106, 255',
@@ -73,7 +88,10 @@ export const useStyleStore = defineStore('style', () => {
         floatElements: 'qverFloat',
         loading: 'qverGlow',
         cursor: 'qverRipple',
-      }
+      },
+      cardStyle: 'soft',
+      fontDisplay: 'Quicksand, sans-serif',
+      fontBody: 'Quicksand, sans-serif',
     }
   }
 
@@ -103,6 +121,8 @@ export const useStyleStore = defineStore('style', () => {
     root.style.setProperty('--header-bg', t.colors.headerBg)
     root.style.setProperty('--card-bg', t.colors.cardBg)
     root.style.setProperty('--shadow', t.colors.shadow)
+    root.style.setProperty('--font-display', t.fontDisplay)
+    root.style.setProperty('--font-body', t.fontBody)
     document.body.style.background = t.colors.bg
   }
 

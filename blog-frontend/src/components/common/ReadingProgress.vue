@@ -18,8 +18,17 @@
     @click="goRandom"
     title="随机一篇文章"
   >
-    <span class="dice" :style="{ transform: `rotate(${diceRotation}deg)` }">🎲</span>
-    <span class="dice-face" v-if="diceResult">{{ diceResult }}</span>
+    <div class="dice-container" :class="{ 'is-rolling': isRolling }">
+      <div class="dice-shadow"></div>
+      <div class="dice" :style="diceStyle">
+        <div class="dice-face face-1"><span class="dot"></span></div>
+        <div class="dice-face face-2"><span class="dot"></span><span class="dot"></span></div>
+        <div class="dice-face face-3"><span class="dot"></span><span class="dot"></span><span class="dot"></span></div>
+        <div class="dice-face face-4"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span></div>
+        <div class="dice-face face-5"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span></div>
+        <div class="dice-face face-6"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span></div>
+      </div>
+    </div>
     <span class="tooltip">{{ isRolling ? '摇啊摇...' : '随机文章' }}</span>
   </div>
 </template>
@@ -37,7 +46,40 @@ const progress = ref(0)
 const showBackToTop = ref(false)
 const isRolling = ref(false)
 const diceResult = ref(null)
-const diceRotation = ref(0)
+const diceStyle = ref({})
+
+// 面角度映射：每个点数对应的旋转角度
+const FACE_ANGLES = {
+  1: { x: 0, y: 0 },
+  2: { x: 0, y: 180 },
+  3: { x: 0, y: -90 },
+  4: { x: 0, y: 90 },
+  5: { x: -90, y: 0 },
+  6: { x: 90, y: 0 }
+}
+
+// 掷骰子动画
+const rollDice = (targetFace) => {
+  const { x, y } = FACE_ANGLES[targetFace]
+  // 额外整圈：720~1080度
+  const extra = (Math.floor(Math.random() * 2) + 2) * 360
+  const finalX = x + extra
+  const finalY = y + extra
+
+  // 先重置到初始位置（无过渡）
+  diceStyle.value = {
+    transform: 'rotateX(0deg) rotateY(0deg)',
+    transition: 'transform 0.01s'
+  }
+
+  // 下一步设置最终位置触发动画
+  setTimeout(() => {
+    diceStyle.value = {
+      transform: `rotateX(${finalX}deg) rotateY(${finalY}deg)`,
+      transition: 'transform 1s cubic-bezier(0.2, 0.8, 0.3, 1)'
+    }
+  }, 50)
+}
 
 const updateProgress = () => {
   const scrollTop = window.scrollY
@@ -55,42 +97,31 @@ const goRandom = async () => {
 
   try {
     const res = await api.getPosts({ page: 1, page_size: 100 })
-    if (res.code === 0 && res.data && res.data.length > 0) {
-      const posts = res.data
+    if (res.code === 0 && res.data) {
+      // 兼容新旧两种 API 格式
+      const posts = res.data.list || (Array.isArray(res.data) ? res.data : [])
+      if (posts.length > 0) {
+        isRolling.value = true
+        diceResult.value = null
 
-      // 开始滚动动画
-      isRolling.value = true
-      diceResult.value = null
+        // 随机结果 1-6
+        const finalResult = Math.floor(Math.random() * 6) + 1
+        diceResult.value = finalResult
 
-      // 滚动动画：快速变换角度
-      const rollDuration = 1500 // 1.5秒
-      const rollInterval = 50 // 每50ms更新一次
-      let elapsed = 0
+        // 启动掷骰子动画
+        rollDice(finalResult)
 
-      const rollAnim = setInterval(() => {
-        elapsed += rollInterval
-        diceRotation.value += 180 + Math.random() * 180
-
-        if (elapsed >= rollDuration) {
-          clearInterval(rollAnim)
-
-          // 动画结束，确定最终点数 (1-6)
-          const finalResult = Math.floor(Math.random() * 6) + 1
-          diceResult.value = finalResult
-
-          // 用骰子点数作为索引偏移
-          const baseIndex = Math.floor(Math.random() * posts.length)
-          const offsetIndex = (baseIndex + finalResult - 1) % posts.length
-          const randomPost = posts[offsetIndex]
-
-          // 延迟一下显示结果
-          setTimeout(() => {
-            isRolling.value = false
-            window.scrollTo({ top: 0, behavior: 'instant' })
+        // 动画结束后跳转
+        setTimeout(() => {
+          const targetIndex = (finalResult - 1) % posts.length
+          const randomPost = posts[targetIndex]
+          isRolling.value = false
+          window.scrollTo({ top: 0, behavior: 'instant' })
+          if (randomPost && randomPost.slug) {
             router.push(`/post/${randomPost.slug}`)
-          }, 500)
-        }
-      }, rollInterval)
+          }
+        }, 1300)
+      }
     }
   } catch (e) {
     console.error('Failed to get random post:', e)
@@ -182,8 +213,8 @@ onUnmounted(() => {
   position: fixed;
   bottom: 30px;
   left: 30px;
-  width: 50px;
-  height: 50px;
+  width: 56px;
+  height: 56px;
   background: var(--card-bg);
   border: 2px solid var(--accent);
   border-radius: 50%;
@@ -195,47 +226,127 @@ onUnmounted(() => {
   z-index: 1000;
   transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
   overflow: visible;
+  box-shadow: 0 4px 16px var(--shadow);
 }
 
 .random-btn:hover {
   transform: scale(1.1);
+  box-shadow: 0 6px 24px var(--shadow);
 }
 
 .random-btn.rolling {
-  animation: pulse 0.3s ease-in-out infinite;
   pointer-events: none;
 }
 
-@keyframes pulse {
-  0%, 100% { transform: scale(1); }
-  50% { transform: scale(1.15); }
+/* 3D 骰子容器 */
+.dice-container {
+  width: 44px;
+  height: 44px;
+  perspective: 900px;
+  perspective-origin: center center;
+  position: relative;
 }
 
-.random-btn .dice {
-  font-size: 24px;
-  transition: transform 0.05s linear;
-}
-
-.random-btn.rolling .dice {
-  font-size: 18px;
-}
-
-.random-btn .dice-face {
+/* 骰子阴影 */
+.dice-shadow {
   position: absolute;
-  bottom: -2px;
-  right: -2px;
-  background: var(--accent);
-  color: white;
-  font-size: 10px;
-  font-weight: bold;
-  width: 18px;
-  height: 18px;
+  width: 40px;
+  height: 10px;
+  background: radial-gradient(ellipse, rgba(0,0,0,0.25) 0%, transparent 70%);
   border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border: 2px solid var(--card-bg);
+  bottom: -8px;
+  left: 50%;
+  transform: translateX(-50%);
+  transition: all 0.3s ease;
 }
+
+.dice-container.is-rolling .dice-shadow {
+  animation: shadowPulse 0.15s ease-in-out infinite alternate;
+}
+
+@keyframes shadowPulse {
+  from { transform: translateX(-50%) scale(0.9); opacity: 0.8; }
+  to { transform: translateX(-50%) scale(1.1); opacity: 0.4; }
+}
+
+/* 骰子本体 */
+.dice {
+  width: 44px;
+  height: 44px;
+  position: relative;
+  transform-style: preserve-3d;
+  will-change: transform;
+  transform: rotateX(-25deg) rotateY(-40deg);
+}
+
+.dice-container.is-rolling .dice {
+  transition: none;
+}
+
+/* 骰子每个面 - 清晰的白色+紫色边框 */
+.dice-face {
+  position: absolute;
+  width: 44px;
+  height: 44px;
+  background: linear-gradient(145deg, #ffffff 0%, #f5f5f5 100%);
+  border: 2px solid var(--accent);
+  border-radius: 10px;
+  box-sizing: border-box;
+  backface-visibility: hidden;
+}
+
+/* 骰子点数 - 使用 grid 精确定位 */
+.dice-face {
+  display: grid;
+  padding: 6px;
+}
+
+.dot {
+  width: 8px;
+  height: 8px;
+  background: linear-gradient(145deg, var(--accent) 0%, color-mix(in srgb, var(--accent) 85%, black) 100%);
+  border-radius: 50%;
+  box-shadow: inset 0 1px 2px rgba(255,255,255,0.4), inset 0 -1px 1px rgba(0,0,0,0.15);
+  justify-self: center;
+  align-self: center;
+}
+
+/* 骰子六个面的定位 */
+.face-1 { transform: rotateY(0deg) translateZ(22px); }
+.face-2 { transform: rotateY(180deg) translateZ(22px); }
+.face-3 { transform: rotateY(90deg) translateZ(22px); }
+.face-4 { transform: rotateY(-90deg) translateZ(22px); }
+.face-5 { transform: rotateX(90deg) translateZ(22px); }
+.face-6 { transform: rotateX(-90deg) translateZ(22px); }
+
+/* 各面的点数布局 - 使用 grid 精确定位 */
+.face-1 { place-items: center; }
+
+.face-2 { place-items: center; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; }
+.face-2 .dot:first-child { grid-area: 1 / 1; justify-self: start; align-self: start; }
+.face-2 .dot:last-child { grid-area: 2 / 2; justify-self: end; align-self: end; }
+
+.face-3 { place-items: center; grid-template-columns: 1fr 1fr 1fr; grid-template-rows: 1fr 1fr 1fr; }
+.face-3 .dot:nth-child(1) { grid-area: 1 / 1; justify-self: start; align-self: start; }
+.face-3 .dot:nth-child(2) { grid-area: 2 / 2; }
+.face-3 .dot:nth-child(3) { grid-area: 3 / 3; justify-self: end; align-self: end; }
+
+.face-4 { place-items: center; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; }
+
+.face-5 {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  grid-template-rows: repeat(3, 1fr);
+  place-items: center;
+  padding: 8px;
+}
+.face-5 .dot:nth-child(1) { grid-area: 1 / 1; }
+.face-5 .dot:nth-child(2) { grid-area: 1 / 3; }
+.face-5 .dot:nth-child(3) { grid-area: 2 / 2; }
+.face-5 .dot:nth-child(4) { grid-area: 3 / 1; }
+.face-5 .dot:nth-child(5) { grid-area: 3 / 3; }
+
+.face-6 { place-items: center; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr 1fr; }
 
 .random-btn .tooltip {
   position: absolute;

@@ -19,23 +19,30 @@
           <span class="link-text">About</span>
         </router-link>
 
-        <el-dropdown @command="handleStyleChange" trigger="click" class="theme-dropdown">
-          <span class="style-switcher">
-            <span class="switcher-icon">🎨</span>
+        <el-dropdown @command="handleStyleChange" trigger="click" class="theme-dropdown" :popper-class="'theme-dropdown-panel theme-' + styleStore.currentTheme">
+          <span class="style-switcher" :class="'theme-' + styleStore.currentTheme">
+            <span class="switcher-icon">{{ styleStore.theme.icon }}</span>
             <span class="switcher-text">{{ styleStore.theme.name }}</span>
             <span class="arrow">▼</span>
           </span>
           <template #dropdown>
-            <el-dropdown-menu>
+            <el-dropdown-menu class="theme-menu">
               <el-dropdown-item
                 v-for="(t, key) in styleStore.themes"
                 :key="key"
                 :command="key"
-                :class="{ active: key === styleStore.currentTheme }"
+                :class="{ active: key === styleStore.currentTheme, ['theme-' + key]: true }"
               >
-                <img :src="t.logo" class="theme-logo" :alt="t.name" />
-                {{ t.name }}
-                <span v-if="key === styleStore.currentTheme" class="check">✓</span>
+                <div class="theme-card">
+                  <div class="theme-preview" :style="{ background: t.preview }">
+                    <span class="theme-icon">{{ t.icon }}</span>
+                  </div>
+                  <div class="theme-info">
+                    <span class="theme-name">{{ t.name }}</span>
+                    <span class="theme-tagline">{{ t.tagline }}</span>
+                  </div>
+                  <span v-if="key === styleStore.currentTheme" class="check">✓</span>
+                </div>
               </el-dropdown-item>
             </el-dropdown-menu>
           </template>
@@ -195,50 +202,121 @@ const handleCommand = (command) => {
   color: var(--accent);
   cursor: pointer;
   padding: 8px 12px;
-  border-radius: 8px;
-  transition: all 0.2s;
+  border-radius: 12px;
+  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
   font-size: 14px;
   background: var(--accent-bg);
+  border: 2px solid transparent;
 }
 
 .style-switcher:hover {
-  background: var(--accent);
-  color: white;
+  transform: scale(1.05);
+  border-color: var(--accent);
+  box-shadow: 0 4px 20px var(--shadow);
 }
 
-.switcher-icon {
-  font-size: 14px;
-}
-
-.arrow {
+.style-switcher .arrow {
   font-size: 10px;
-  transition: transform 0.2s;
+  transition: transform 0.3s;
 }
 
 .style-switcher:hover .arrow {
   transform: rotate(180deg);
 }
 
-.theme-logo {
-  width: 20px;
-  height: 20px;
-  margin-right: 8px;
-  vertical-align: middle;
+/* 主题菜单样式 */
+:deep(.theme-menu) {
+  padding: 8px !important;
+  background: var(--card-bg) !important;
+  border: 1px solid var(--border) !important;
+  border-radius: 16px !important;
+  box-shadow: 0 20px 60px var(--shadow) !important;
+}
+
+:deep(.el-dropdown-menu__item) {
+  padding: 0 !important;
+  margin: 4px 0;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+:deep(.el-dropdown-menu__item .theme-card) {
+  display: flex;
+  align-items: center;
+  padding: 12px;
+  gap: 12px;
+  transition: all 0.3s;
+}
+
+:deep(.el-dropdown-menu__item:hover .theme-card) {
+  transform: translateX(4px);
+}
+
+:deep(.el-dropdown-menu__item.active) {
+  background: var(--accent-bg) !important;
+}
+
+.theme-preview {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.theme-preview .theme-icon {
+  font-size: 24px;
+  filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2));
+}
+
+:deep(.el-dropdown-menu__item:hover .theme-preview) {
+  transform: scale(1.1) rotate(-5deg);
+}
+
+.theme-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.theme-name {
+  font-weight: 600;
+  color: var(--text-h);
+  font-size: 14px;
+}
+
+.theme-tagline {
+  font-size: 10px;
+  color: var(--text);
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  opacity: 0.7;
 }
 
 .check {
   margin-left: auto;
   color: var(--accent);
+  font-size: 16px;
+  font-weight: bold;
 }
 
-:deep(.el-dropdown-menu__item) {
-  display: flex;
-  align-items: center;
+/* 像素风主题卡片悬停 */
+:deep(.theme-pixel:hover .theme-preview) {
+  background: linear-gradient(135deg, #b366ff 0%, #7c3aed 100%) !important;
 }
 
-:deep(.el-dropdown-menu__item.active) {
-  color: var(--accent);
-  background: var(--accent-bg);
+/* 可爱风主题卡片悬停 */
+:deep(.theme-cute:hover .theme-preview) {
+  background: linear-gradient(135deg, #ff6b9d 0%, #ffa8c5 100%) !important;
+}
+
+/* Q版主题卡片悬停 */
+:deep(.theme-qver:hover .theme-preview) {
+  background: linear-gradient(135deg, #7c6aff 0%, #a78bfa 100%) !important;
 }
 
 .user {

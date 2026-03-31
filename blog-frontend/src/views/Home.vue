@@ -21,10 +21,17 @@
         </transition-group>
 
         <!-- 加载更多触发器 -->
-        <div ref="loadMoreTrigger" class="load-more-trigger"></div>
+        <div ref="loadMoreTrigger" class="load-more-trigger">
+          <div v-if="loading && posts.length > 0" class="loading-more">
+            <div class="loading-dots">
+              <span></span><span></span><span></span>
+            </div>
+            <p>加载更多文章...</p>
+          </div>
+        </div>
 
         <div v-if="loading && (!posts || posts.length === 0)" class="loading">
-          <span class="loading-icon">⏳</span>
+          <div class="loading-spinner"></div>
           <p>加载中...</p>
         </div>
 
@@ -129,12 +136,12 @@ onMounted(async () => {
   await fetchPosts(true)
   initialized = true
 
-  // 滚动加载
+  // 滚动加载 - 提前 300px 触发
   observer = new IntersectionObserver((entries) => {
     if (entries[0].isIntersecting && !loading.value && hasMore.value) {
       fetchPosts(false)
     }
-  }, { threshold: 0.1 })
+  }, { threshold: 0, rootMargin: '300px 0px 0px 0px' })
 
   if (loadMoreTrigger.value) {
     observer.observe(loadMoreTrigger.value)
@@ -253,25 +260,67 @@ onUnmounted(() => {
 }
 
 .load-more-trigger {
-  height: 20px;
+  height: 60px;
   margin: 20px 0;
 }
 
 .loading {
   text-align: center;
-  padding: 40px 20px;
+  padding: 60px 20px;
   color: var(--text);
 }
 
-.loading-icon {
-  font-size: 32px;
-  display: block;
-  margin-bottom: 12px;
-  animation: spin 1s linear infinite;
+.loading-spinner {
+  width: 40px;
+  height: 40px;
+  margin: 0 auto 16px;
+  border: 3px solid var(--border);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
 }
+
+.loading-more {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 20px;
+  animation: fadeIn 0.3s ease;
+}
+
+.loading-dots {
+  display: flex;
+  gap: 6px;
+}
+
+.loading-dots span {
+  width: 8px;
+  height: 8px;
+  background: var(--accent);
+  border-radius: 50%;
+  animation: bounce 1.4s ease-in-out infinite both;
+}
+
+.loading-dots span:nth-child(1) { animation-delay: -0.32s; }
+.loading-dots span:nth-child(2) { animation-delay: -0.16s; }
 
 @keyframes spin {
   to { transform: rotate(360deg); }
+}
+
+@keyframes bounce {
+  0%, 80%, 100% {
+    transform: scale(0);
+  }
+  40% {
+    transform: scale(1);
+  }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 .no-more {

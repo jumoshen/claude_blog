@@ -229,6 +229,16 @@ onUnmounted(() => {
   box-shadow: 0 4px 16px var(--shadow);
 }
 
+/* 像素风按钮更像素 */
+.theme-pixel.random-btn {
+  border-radius: 12px;
+  border-width: 3px;
+}
+
+.theme-pixel.random-btn:hover {
+  transform: scale(1.08);
+}
+
 .random-btn:hover {
   transform: scale(1.1);
   box-shadow: 0 6px 24px var(--shadow);
@@ -309,6 +319,29 @@ onUnmounted(() => {
   box-shadow: inset 0 1px 2px rgba(255,255,255,0.4), inset 0 -1px 1px rgba(0,0,0,0.15);
   justify-self: center;
   align-self: center;
+}
+
+/* 像素风主题 - 骰子像素化但保持圆润 */
+.theme-pixel .dice-face {
+  border-radius: 4px;
+  border: 2px solid var(--accent);
+  background: #fff;
+  box-shadow:
+    inset -2px -2px 0 rgba(0,0,0,0.08),
+    inset 2px 2px 0 rgba(255,255,255,0.9),
+    0 0 0 1px rgba(0,0,0,0.05);
+}
+
+/* 像素风点数 - 小方块带像素风阴影 */
+.theme-pixel .dot {
+  border-radius: 0;
+  width: 7px;
+  height: 7px;
+  background: var(--accent);
+  box-shadow:
+    inset -1px -1px 0 rgba(0,0,0,0.25),
+    inset 1px 1px 0 rgba(255,255,255,0.35),
+    1px 1px 0 rgba(0,0,0,0.15);
 }
 
 /* 骰子六个面的定位 */

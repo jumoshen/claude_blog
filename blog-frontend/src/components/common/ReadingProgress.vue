@@ -344,6 +344,67 @@ onUnmounted(() => {
     1px 1px 0 rgba(0,0,0,0.15);
 }
 
+/* 可爱风主题 - 骰子更圆润甜美 */
+.theme-cute .dice-face {
+  border-radius: 12px;
+  border: none;
+  background: linear-gradient(145deg, #ffffff 0%, #fff5f7 100%);
+  box-shadow:
+    0 4px 12px rgba(255, 107, 157, 0.2),
+    inset 0 2px 4px rgba(255,255,255,0.9);
+}
+
+/* 可爱风点数 - 圆润带高光 */
+.theme-cute .dot {
+  border-radius: 50%;
+  width: 9px;
+  height: 9px;
+  background: linear-gradient(145deg, #ff8ab5 0%, #ff6b9d 100%);
+  box-shadow:
+    inset 0 2px 3px rgba(255,255,255,0.6),
+    inset 0 -2px 3px rgba(0,0,0,0.1),
+    0 2px 4px rgba(255, 107, 157, 0.3);
+}
+
+/* 可爱风按钮更圆润 */
+.theme-cute.random-btn {
+  border-radius: 28px;
+  border: 3px solid var(--accent);
+}
+
+/* Q版主题 - 骰子更潮更酷 */
+.theme-qver .dice-face {
+  border-radius: 14px;
+  border: 2px solid rgba(124, 106, 255, 0.3);
+  background: linear-gradient(145deg, #ffffff 0%, #f0f0ff 100%);
+  box-shadow:
+    0 6px 20px rgba(124, 106, 255, 0.25),
+    inset 0 2px 6px rgba(255,255,255,1),
+    inset 0 -1px 3px rgba(124, 106, 255, 0.1);
+}
+
+/* Q版点数 - 更大更亮 */
+.theme-qver .dot {
+  border-radius: 50%;
+  width: 10px;
+  height: 10px;
+  background: linear-gradient(145deg, #a78bfa 0%, #7c6aff 100%);
+  box-shadow:
+    inset 0 2px 4px rgba(255,255,255,0.5),
+    inset 0 -2px 3px rgba(0,0,0,0.15),
+    0 3px 6px rgba(124, 106, 255, 0.4);
+}
+
+/* Q版按钮更潮 */
+.theme-qver.random-btn {
+  border-radius: 20px;
+  border: 2px solid var(--accent);
+  background: linear-gradient(145deg, #ffffff 0%, #f8f5ff 100%);
+  box-shadow:
+    0 4px 20px rgba(124, 106, 255, 0.3),
+    0 0 0 4px rgba(124, 106, 255, 0.1);
+}
+
 /* 骰子六个面的定位 */
 .face-1 { transform: rotateY(0deg) translateZ(22px); }
 .face-2 { transform: rotateY(180deg) translateZ(22px); }
@@ -368,16 +429,15 @@ onUnmounted(() => {
 
 .face-5 {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  grid-template-rows: repeat(3, 1fr);
-  place-items: center;
+  grid-template-columns: 1fr 1fr 1fr;
+  grid-template-rows: 1fr 1fr 1fr;
   padding: 8px;
 }
-.face-5 .dot:nth-child(1) { grid-area: 1 / 1; }
-.face-5 .dot:nth-child(2) { grid-area: 1 / 3; }
-.face-5 .dot:nth-child(3) { grid-area: 2 / 2; }
-.face-5 .dot:nth-child(4) { grid-area: 3 / 1; }
-.face-5 .dot:nth-child(5) { grid-area: 3 / 3; }
+.face-5 .dot:nth-child(1) { grid-area: 1 / 1; justify-self: start; align-self: start; }
+.face-5 .dot:nth-child(2) { grid-area: 1 / 3; justify-self: end; align-self: start; }
+.face-5 .dot:nth-child(3) { grid-area: 2 / 2; justify-self: center; align-self: center; }
+.face-5 .dot:nth-child(4) { grid-area: 3 / 1; justify-self: start; align-self: end; }
+.face-5 .dot:nth-child(5) { grid-area: 3 / 3; justify-self: end; align-self: end; }
 
 .face-6 { place-items: center; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr 1fr; }
 

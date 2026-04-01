@@ -17,19 +17,18 @@
               @click="flipCard(index)"
             >
               <!-- 牌背面 -->
-              <div class="card-face card-back">
+              <div class="card-face card-back" :style="{ backgroundImage: `url('/card-backs/${card.backImage}')` }">
                 <div class="poker-pattern">
                   <span class="suit">&#9824;</span>
                 </div>
               </div>
 
               <!-- 牌正面 -->
-              <div class="card-face card-front">
+              <div class="card-face card-front" :style="{ backgroundImage: `url('/card-backs/${card.frontImage}')` }">
                 <div class="card-front-content">
                   <div class="card-title" @click.stop="goToPost(card)">
                     {{ card.title }}
                   </div>
-                  <div class="card-date" v-if="card.date">{{ formatDate(card.date) }}</div>
                 </div>
               </div>
             </div>
@@ -69,6 +68,22 @@ const formatDate = (dateStr) => {
   return date.toLocaleDateString('zh-CN', { year: 'numeric', month: 'short', day: 'numeric' })
 }
 
+// 根据主题获取背面图片列表
+const getBackImages = (theme) => {
+  const images = {
+    'theme-pixel': ['back_1.png', 'back_4.png'],
+    'theme-cute': ['back_2.jpg', 'back_5.png'],
+    'theme-qver': ['back_3.png', 'back_6.png']
+  }
+  return images[theme] || images['theme-pixel']
+}
+
+// 正面图片列表
+const frontImages = ['fron_1.png', 'fron_2.png', 'fron_3.png', 'fron_4.png']
+
+// 随机从列表中选择一个
+const randomPick = (list) => list[Math.floor(Math.random() * list.length)]
+
 const fetchPosts = async () => {
   try {
     const res = await api.getPosts({ page: 1, page_size: 100 })
@@ -76,12 +91,16 @@ const fetchPosts = async () => {
       const posts = res.data.list || []
       // 随机选3篇
       const shuffled = [...posts].sort(() => Math.random() - 0.5)
-      cards.value = shuffled.slice(0, 3).map(post => ({
+      const backImages = getBackImages(currentTheme.value)
+
+      cards.value = shuffled.slice(0, 3).map((post, index) => ({
         id: post.id,
         slug: post.slug,
         title: post.title || '无标题',
         date: post.date || '',
-        flipped: false
+        flipped: false,
+        backImage: randomPick(backImages), // 随机背面图片
+        frontImage: randomPick(frontImages) // 随机正面图片
       }))
 
       // 如果文章不足3篇，填充占位
@@ -91,17 +110,20 @@ const fetchPosts = async () => {
           slug: null,
           title: '暂无文章',
           date: '',
-          flipped: false
+          flipped: false,
+          backImage: randomPick(backImages),
+          frontImage: randomPick(frontImages)
         })
       }
     }
   } catch (e) {
     console.error('Failed to fetch posts:', e)
+    const backImages = getBackImages(currentTheme.value)
     // 填充占位卡片
     cards.value = [
-      { id: null, slug: null, title: '加载失败', date: '', flipped: false },
-      { id: null, slug: null, title: '加载失败', date: '', flipped: false },
-      { id: null, slug: null, title: '加载失败', date: '', flipped: false }
+      { id: null, slug: null, title: '加载失败', date: '', flipped: false, backImage: randomPick(backImages), frontImage: randomPick(frontImages) },
+      { id: null, slug: null, title: '加载失败', date: '', flipped: false, backImage: randomPick(backImages), frontImage: randomPick(frontImages) },
+      { id: null, slug: null, title: '加载失败', date: '', flipped: false, backImage: randomPick(backImages), frontImage: randomPick(frontImages) }
     ]
   }
 }
@@ -223,11 +245,15 @@ watch(() => props.visible, (newVal) => {
 
 .card-back {
   background: linear-gradient(145deg, var(--card-bg) 0%, var(--accent-bg) 100%);
+  background-size: cover;
+  background-position: center;
   transform: rotateY(0deg);
 }
 
 .card-front {
   background: linear-gradient(145deg, #ffffff 0%, var(--card-bg) 100%);
+  background-size: cover;
+  background-position: center;
   transform: rotateY(180deg);
   padding: 16px;
 }
@@ -239,6 +265,7 @@ watch(() => props.visible, (newVal) => {
   justify-content: center;
   height: 100%;
   gap: 8px;
+  padding: 12px;
 }
 
 .poker-pattern {
@@ -260,7 +287,7 @@ watch(() => props.visible, (newVal) => {
 
 .card-title {
   font-size: 13px;
-  color: var(--text);
+  color: #fff;
   text-align: center;
   word-break: break-word;
   line-height: 1.4;
@@ -271,6 +298,7 @@ watch(() => props.visible, (newVal) => {
   display: -webkit-box;
   -webkit-line-clamp: 5;
   -webkit-box-orient: vertical;
+  text-shadow: 0 1px 3px rgba(0,0,0,0.8), 0 0 8px rgba(0,0,0,0.5);
 }
 
 .card-title:hover {
@@ -279,8 +307,9 @@ watch(() => props.visible, (newVal) => {
 
 .card-date {
   font-size: 10px;
-  color: var(--text);
-  opacity: 0.6;
+  color: #fff;
+  opacity: 0.9;
+  text-shadow: 0 1px 3px rgba(0,0,0,0.8);
 }
 
 .hint {
@@ -309,53 +338,43 @@ watch(() => props.visible, (newVal) => {
   box-shadow: 0 6px 20px rgba(124, 106, 255, 0.2);
 }
 
-/* 主题适配 - 扑克牌背面样式（使用背景图） */
-/* 图片1536x1024，6张背面: 2行3列，每张512x512 */
-/* 背面位置: (0,0), (512,0), (1024,0), (0,512), (512,512), (1024,512) */
+/* 主题适配 - 扑克牌背面样式（使用独立图片） */
 
-/* 像素风: 3张不同的像素卡 (第一行: 0, 512, 1024 at y=0) */
-.theme-pixel .card-back {
-  background-image: url('/card-backs/blog_background.png');
-  background-size: 1536px 1024px;
-  background-position: 0px 0px;
-  border: none;
-  border-radius: 0;
+/* 像素风: 2张不同的像素卡 */
+.theme-pixel .card:nth-child(1) .card-back {
+  background-image: url('/card-backs/back_1.png');
+}
+.theme-pixel .card:nth-child(2) .card-back {
+  background-image: url('/card-backs/back_4.png');
+}
+.theme-pixel .card:nth-child(3) .card-back {
+  background-image: url('/card-backs/back_1.png');
 }
 
-.theme-pixel .card:nth-child(1) .card-back { background-position: 0px 0px; }
-.theme-pixel .card:nth-child(2) .card-back { background-position: -512px 0px; }
-.theme-pixel .card:nth-child(3) .card-back { background-position: -1024px 0px; }
-
-/* 可爱风: 2张可爱卡 (第二行: 0, 512 at y=512), 第三张循环 */
-.theme-cute .card-back {
-  background-image: url('/card-backs/blog_background.png');
-  background-size: 1536px 1024px;
-  background-position: 0px -512px;
-  border: none;
-  border-radius: 0;
+/* 可爱风: 2张可爱卡 */
+.theme-cute .card:nth-child(1) .card-back {
+  background-image: url('/card-backs/back_2.jpg');
+}
+.theme-cute .card:nth-child(2) .card-back {
+  background-image: url('/card-backs/back_5.png');
+}
+.theme-cute .card:nth-child(3) .card-back {
+  background-image: url('/card-backs/back_2.jpg');
 }
 
-.theme-cute .card:nth-child(1) .card-back { background-position: 0px -512px; }
-.theme-cute .card:nth-child(2) .card-back { background-position: -512px -512px; }
-.theme-cute .card:nth-child(3) .card-back { background-position: 0px -512px; }
-
-/* Q版: 只有1张Q版卡 (第二行: 1024 at y=512), 循环 */
-.theme-qver .card-back {
-  background-image: url('/card-backs/blog_background.png');
-  background-size: 1536px 1024px;
-  background-position: -1024px -512px;
-  border: none;
-  border-radius: 0;
+/* Q版: 2张Q版卡 */
+.theme-qver .card:nth-child(1) .card-back {
+  background-image: url('/card-backs/back_3.png');
 }
-
-.theme-qver .card:nth-child(1) .card-back { background-position: -1024px -512px; }
-.theme-qver .card:nth-child(2) .card-back { background-position: -1024px -512px; }
-.theme-qver .card:nth-child(3) .card-back { background-position: -1024px -512px; }
+.theme-qver .card:nth-child(2) .card-back {
+  background-image: url('/card-backs/back_6.png');
+}
+.theme-qver .card:nth-child(3) .card-back {
+  background-image: url('/card-backs/back_3.png');
+}
 
 /* 隐藏扑克牌花色符号（改用背景图） */
-.theme-pixel .poker-pattern,
-.theme-cute .poker-pattern,
-.theme-qver .poker-pattern {
+.poker-pattern {
   display: none;
 }
 

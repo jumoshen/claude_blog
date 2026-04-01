@@ -8,7 +8,7 @@
             <button class="close-btn" @click="handleClose">&times;</button>
           </div>
 
-          <div class="cards-container">
+          <div class="cards-container" :class="currentTheme">
             <div
               v-for="(card, index) in cards"
               :key="index"
@@ -43,9 +43,13 @@
 </template>
 
 <script setup>
-import { ref, watch, onMounted } from 'vue'
+import { ref, watch, onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
+import { useStyleStore } from '../../store/style'
 import api from '../../api'
+
+const styleStore = useStyleStore()
+const currentTheme = computed(() => 'theme-' + styleStore.currentTheme)
 
 const props = defineProps({
   visible: {
@@ -305,90 +309,50 @@ watch(() => props.visible, (newVal) => {
   box-shadow: 0 6px 20px rgba(124, 106, 255, 0.2);
 }
 
-/* 主题适配 - 扑克牌背面样式 */
+/* 主题适配 - 扑克牌背面样式（使用背景图） */
+/* 图片1536x1024，6张背面: 2行3列，每张512x512 */
+/* 背面位置: (0,0), (512,0), (1024,0), (0,512), (512,512), (1024,512) */
+
 .theme-pixel .card-back {
-  background:
-    repeating-linear-gradient(
-      0deg,
-      #ff6b9d 0px,
-      #ff6b9d 10px,
-      #c44569 10px,
-      #c44569 20px
-    ),
-    repeating-linear-gradient(
-      90deg,
-      #ff6b9d 0px,
-      #ff6b9d 10px,
-      #c44569 10px,
-      #c44569 20px
-    );
-  border: 4px solid #2d2d2d;
-  box-shadow: 4px 4px 0 #2d2d2d;
+  background-image: url('/card-backs/blog_background.png');
+  background-size: 1536px 1024px;
+  background-position: 0px 0px;
+  border: none;
+  border-radius: 0;
 }
 
-.theme-pixel .card-back .poker-pattern {
-  width: 60px;
-  height: 84px;
-  background: #2d2d2d;
-  border: 3px solid #fff;
-  box-shadow: inset 0 0 0 2px #2d2d2d;
-}
-
-.theme-pixel .card-back .suit {
-  font-size: 36px;
-  color: #ff6b9d;
-  text-shadow: none;
-}
+.theme-pixel .card:nth-child(1) .card-back { background-position: 0px 0px; }
+.theme-pixel .card:nth-child(2) .card-back { background-position: -512px 0px; }
+.theme-pixel .card:nth-child(3) .card-back { background-position: -1024px 0px; }
 
 .theme-cute .card-back {
-  background: linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%);
+  background-image: url('/card-backs/blog_background.png');
+  background-size: 1536px 1024px;
+  background-position: 0px -512px;
   border: none;
-  border-radius: 20px;
-  box-shadow: 0 8px 32px rgba(255, 107, 157, 0.3);
+  border-radius: 0;
 }
 
-.theme-cute .card-back .poker-pattern {
-  width: 60px;
-  height: 84px;
-  background: linear-gradient(135deg, #ff8ab5 0%, #ff6b9d 100%);
-  border-radius: 12px;
-  box-shadow: 0 4px 12px rgba(255, 107, 157, 0.4);
-}
-
-.theme-cute .card-back .suit {
-  font-size: 40px;
-  background: linear-gradient(135deg, #fff 0%, #fff5f7 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-}
+.theme-cute .card:nth-child(1) .card-back { background-position: 0px -512px; }
+.theme-cute .card:nth-child(2) .card-back { background-position: -512px -512px; }
+.theme-cute .card:nth-child(3) .card-back { background-position: -1024px -512px; }
 
 .theme-qver .card-back {
-  background:
-    linear-gradient(135deg, rgba(124, 106, 255, 0.1) 0%, transparent 50%),
-    linear-gradient(225deg, rgba(124, 106, 255, 0.1) 0%, transparent 50%),
-    linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
-  border: 2px solid rgba(124, 106, 255, 0.6);
-  border-radius: 16px;
-  box-shadow:
-    0 0 20px rgba(124, 106, 255, 0.4),
-    inset 0 0 30px rgba(124, 106, 255, 0.1);
+  background-image: url('/card-backs/blog_background.png');
+  background-size: 1536px 1024px;
+  background-position: -1024px -512px;
+  border: none;
+  border-radius: 0;
 }
 
-.theme-qver .card-back .poker-pattern {
-  width: 60px;
-  height: 84px;
-  background: rgba(124, 106, 255, 0.2);
-  border: 2px solid rgba(124, 106, 255, 0.6);
-  border-radius: 8px;
-  box-shadow:
-    0 0 15px rgba(124, 106, 255, 0.3),
-    inset 0 0 15px rgba(124, 106, 255, 0.2);
-}
+.theme-qver .card:nth-child(1) .card-back { background-position: -1024px 0px; }
+.theme-qver .card:nth-child(2) .card-back { background-position: -1024px -512px; }
 
-.theme-qver .card-back .suit {
-  font-size: 38px;
-  color: #a78bfa;
-  text-shadow: 0 0 10px #a78bfa, 0 0 20px #7c6aff, 0 0 30px #7c6aff;
+/* 隐藏扑克牌花色符号（改用背景图） */
+.theme-pixel .poker-pattern,
+.theme-cute .poker-pattern,
+.theme-qver .poker-pattern {
+  display: none;
 }
 
 /* Modal 动画 */

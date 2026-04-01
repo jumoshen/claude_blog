@@ -286,7 +286,8 @@ watch(() => props.visible, (newVal) => {
 }
 
 .card-title {
-  font-size: 13px;
+  font-size: 16px;
+  font-weight: bold;
   color: #fff;
   text-align: center;
   word-break: break-word;
@@ -298,7 +299,7 @@ watch(() => props.visible, (newVal) => {
   display: -webkit-box;
   -webkit-line-clamp: 5;
   -webkit-box-orient: vertical;
-  text-shadow: 0 1px 3px rgba(0,0,0,0.8), 0 0 8px rgba(0,0,0,0.5);
+  text-shadow: 0 2px 6px rgba(0,0,0,0.9), 0 0 12px rgba(0,0,0,0.6);
 }
 
 .card-title:hover {

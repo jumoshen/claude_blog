@@ -45,7 +45,7 @@
 
     <!-- 收起时的图标按钮 -->
     <div class="toolbox-trigger" :class="{ active: isExpanded }">
-      <span class="trigger-icon">{{ isExpanded ? '<' : '>' }}</span>
+      <span class="trigger-icon">🔧</span>
     </div>
   </div>
 </template>

@@ -1,5 +1,23 @@
 # 更新日志
 
+## v1.3.0 (2026-04-01)
+
+### SEO优化
+- [x] 添加 sitemap.xml 百度/Google收录
+- [x] robots.txt 正确配置 Sitemap 地址
+- [x] 百度站点验证 (jumoshen.cn)
+
+### 图片上传修复
+- [x] B端上传图片URL改为 `https://jumoshen.cn/uploads/xxx`
+- [x] C端nginx添加 `/uploads/` 代理到MinIO
+- [x] B端新增 `public_base_url` 配置支持独立域名
+
+### 部署修复
+- [x] deploy-all.sh 添加B端仓库正确remote检查
+- [x] 修复服务器B端仓库git remote指向错误问题
+
+---
+
 ## [进行中] 项目重构 (2026-03-24)
 
 ### 环境配置

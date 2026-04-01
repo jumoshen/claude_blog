@@ -313,6 +313,7 @@ watch(() => props.visible, (newVal) => {
 /* 图片1536x1024，6张背面: 2行3列，每张512x512 */
 /* 背面位置: (0,0), (512,0), (1024,0), (0,512), (512,512), (1024,512) */
 
+/* 像素风: 3张不同的像素卡 (第一行: 0, 512, 1024 at y=0) */
 .theme-pixel .card-back {
   background-image: url('/card-backs/blog_background.png');
   background-size: 1536px 1024px;
@@ -325,6 +326,7 @@ watch(() => props.visible, (newVal) => {
 .theme-pixel .card:nth-child(2) .card-back { background-position: -512px 0px; }
 .theme-pixel .card:nth-child(3) .card-back { background-position: -1024px 0px; }
 
+/* 可爱风: 2张可爱卡 (第二行: 0, 512 at y=512), 第三张循环 */
 .theme-cute .card-back {
   background-image: url('/card-backs/blog_background.png');
   background-size: 1536px 1024px;
@@ -335,8 +337,9 @@ watch(() => props.visible, (newVal) => {
 
 .theme-cute .card:nth-child(1) .card-back { background-position: 0px -512px; }
 .theme-cute .card:nth-child(2) .card-back { background-position: -512px -512px; }
-.theme-cute .card:nth-child(3) .card-back { background-position: -1024px -512px; }
+.theme-cute .card:nth-child(3) .card-back { background-position: 0px -512px; }
 
+/* Q版: 只有1张Q版卡 (第二行: 1024 at y=512), 循环 */
 .theme-qver .card-back {
   background-image: url('/card-backs/blog_background.png');
   background-size: 1536px 1024px;
@@ -345,8 +348,9 @@ watch(() => props.visible, (newVal) => {
   border-radius: 0;
 }
 
-.theme-qver .card:nth-child(1) .card-back { background-position: -1024px 0px; }
+.theme-qver .card:nth-child(1) .card-back { background-position: -1024px -512px; }
 .theme-qver .card:nth-child(2) .card-back { background-position: -1024px -512px; }
+.theme-qver .card:nth-child(3) .card-back { background-position: -1024px -512px; }
 
 /* 隐藏扑克牌花色符号（改用背景图） */
 .theme-pixel .poker-pattern,

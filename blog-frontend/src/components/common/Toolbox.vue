@@ -1,6 +1,9 @@
 <template>
   <!-- 工具箱容器 -->
   <div class="toolbox" @mouseenter="isExpanded = true" @mouseleave="isExpanded = false">
+    <!-- 翻牌弹窗 -->
+    <LuckyDrawModal :visible="showCardModal" @close="showCardModal = false" />
+
     <!-- 展开内容 -->
     <transition name="expand">
       <div v-show="isExpanded" class="toolbox-content">
@@ -52,11 +55,13 @@ import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useStyleStore } from '../../store/style'
 import api from '../../api'
+import LuckyDrawModal from './LuckyDrawModal.vue'
 
 const router = useRouter()
 const styleStore = useStyleStore()
 const isExpanded = ref(false)
 const isRolling = ref(false)
+const showCardModal = ref(false)
 const diceResult = ref(null)
 const diceStyle = ref({})
 
@@ -123,9 +128,9 @@ const goRandom = async () => {
   }
 }
 
-// 翻牌功能占位
+// 翻牌功能
 const flipCard = () => {
-  console.log('Flip card - to be implemented in Task 2')
+  showCardModal.value = true
 }
 </script>
 

@@ -134,7 +134,7 @@
 - [ ] RSS 订阅
 
 ### 4.4 技术优化
-- [ ] SEO 优化（sitemap、robots.txt）
+- [x] SEO 优化（sitemap、robots.txt）
 - [ ] 文章密码保护
 - [ ] 真实阅读量统计（防刷）
 - [ ] 管理后台操作日志

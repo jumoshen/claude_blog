@@ -4,6 +4,7 @@ import Header from './components/layout/Header.vue'
 import Footer from './components/layout/Footer.vue'
 import Decorations from './components/common/Decorations.vue'
 import ReadingProgress from './components/common/ReadingProgress.vue'
+import Toolbox from './components/common/Toolbox.vue'
 import { useStyleStore } from './store/style'
 
 const styleStore = useStyleStore()
@@ -17,6 +18,7 @@ onMounted(() => {
   <div id="app">
     <Decorations />
     <ReadingProgress />
+    <Toolbox />
     <Header />
     <main class="main">
       <router-view :key="$route.fullPath" />

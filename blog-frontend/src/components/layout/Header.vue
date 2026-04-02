@@ -49,14 +49,18 @@
         </el-dropdown>
 
         <template v-if="true">
-          <el-dropdown @command="handleCommand">
+          <el-dropdown @command="handleCommand" trigger="click">
             <span class="user">
               <img src="https://avatars.githubusercontent.com/u/1?v=4" class="avatar" />
               <span class="username">testuser</span>
+              <span class="user-arrow">▾</span>
             </span>
             <template #dropdown>
               <el-dropdown-menu>
-                <el-dropdown-item command="logout">登出</el-dropdown-item>
+                <el-dropdown-item command="logout">
+                  <span class="menu-icon">🚪</span>
+                  退出登录
+                </el-dropdown-item>
               </el-dropdown-menu>
             </template>
           </el-dropdown>
@@ -345,23 +349,72 @@ const handleCommand = (command) => {
   font-size: 14px;
 }
 
-/* 用户下拉菜单 */
+.user-arrow {
+  font-size: 10px;
+  color: var(--text);
+  opacity: 0.6;
+  margin-left: 2px;
+  transition: transform 0.2s;
+}
+
+.user:hover .user-arrow {
+  transform: rotate(180deg);
+}
+
+.menu-icon {
+  font-size: 14px;
+}
+
+/* 用户下拉菜单 - Glassmorphism */
+.user {
+  position: relative;
+}
+
 :deep(.el-dropdown-menu) {
-  padding: 4px 0 !important;
-  border-radius: 12px !important;
-  box-shadow: 0 4px 20px var(--shadow) !important;
+  padding: 8px !important;
+  background: var(--card-bg) !important;
   border: 1px solid var(--border) !important;
+  border-radius: 16px !important;
+  box-shadow:
+    0 8px 32px var(--shadow),
+    0 0 0 1px rgba(255,255,255,0.1) inset !important;
+  backdrop-filter: blur(20px) saturate(180%) !important;
+  -webkit-backdrop-filter: blur(20px) saturate(180%) !important;
+  min-width: 140px !important;
 }
 
 :deep(.el-dropdown-menu__item) {
-  padding: 10px 16px !important;
-  font-size: 14px;
-  color: var(--text);
+  padding: 12px 16px !important;
+  margin: 2px 0;
+  border-radius: 10px !important;
+  font-size: 14px !important;
+  color: var(--text) !important;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 10px !important;
+}
+
+:deep(.el-dropdown-menu__item::before) {
+  content: '';
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent);
+  opacity: 0;
+  transform: scale(0);
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
 }
 
 :deep(.el-dropdown-menu__item:hover) {
   background: var(--accent-bg) !important;
   color: var(--accent) !important;
+  padding-left: 20px !important;
+}
+
+:deep(.el-dropdown-menu__item:hover::before) {
+  opacity: 1;
+  transform: scale(1);
 }
 
 /* 像素风特殊效果 */

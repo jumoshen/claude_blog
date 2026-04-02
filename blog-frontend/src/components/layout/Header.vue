@@ -49,7 +49,7 @@
         </el-dropdown>
 
         <template v-if="true">
-          <el-dropdown @command="handleCommand" trigger="click" :show-timeout="150" :hide-timeout="150">
+          <el-dropdown @command="handleCommand" trigger="click" :show-timeout="150" :hide-timeout="150" popper-class="user-dropdown-popper">
             <span class="user">
               <div class="avatar-wrapper">
                 <img src="https://avatars.githubusercontent.com/u/1?v=4" class="avatar" />
@@ -415,17 +415,17 @@ const handleCommand = (command) => {
 .dropdown-wrapper {
   background: var(--card-bg) !important;
   border: 1px solid var(--border) !important;
-  border-radius: 20px !important;
-  padding: 10px !important;
-  min-width: 160px !important;
-  box-shadow: 0 16px 48px var(--shadow) !important;
-  animation: dropdownEnter 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  border-radius: 16px !important;
+  padding: 8px !important;
+  min-width: 140px !important;
+  box-shadow: 0 12px 40px var(--shadow) !important;
+  animation: dropdownEnter 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 @keyframes dropdownEnter {
   from {
     opacity: 0;
-    transform: translateY(-12px) scale(0.95);
+    transform: translateY(-8px) scale(0.96);
   }
   to {
     opacity: 1;
@@ -435,22 +435,21 @@ const handleCommand = (command) => {
 
 /* 退出按钮 */
 :deep(.logout-item) {
-  padding: 14px 18px !important;
-  margin: 4px 0 !important;
-  border-radius: 14px !important;
+  padding: 10px 16px !important;
+  margin: 2px 0 !important;
+  border-radius: 10px !important;
   font-size: 14px !important;
   color: var(--text) !important;
   background: transparent !important;
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
   display: flex !important;
   align-items: center !important;
-  gap: 12px !important;
+  gap: 10px !important;
 }
 
 :deep(.logout-item:hover) {
   background: rgba(255, 80, 80, 0.08) !important;
   color: #ff5050 !important;
-  transform: translateX(4px);
 }
 
 :deep(.logout-item:hover .logout-icon) {
@@ -465,6 +464,21 @@ const handleCommand = (command) => {
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   color: var(--text);
   opacity: 0.6;
+}
+
+/* 去除el-dropdown-popper默认样式 */
+:deep(.user-dropdown-popper) {
+  padding: 0 !important;
+  border: none !important;
+  box-shadow: none !important;
+  background: transparent !important;
+}
+
+:deep(.user-dropdown-popper .el-dropdown-menu) {
+  padding: 0 !important;
+  border: none !important;
+  background: transparent !important;
+  box-shadow: none !important;
 }
 
 /* 像素风特殊效果 */

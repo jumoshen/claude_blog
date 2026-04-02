@@ -4,7 +4,7 @@ import { ref, computed } from 'vue'
 export const useStyleStore = defineStore('style', () => {
   const themes = {
     pixel: {
-      name: '像素风',
+      name: '巨魔深',
       tagline: '8-BIT RETRO',
       logo: '/logo-pixel.png',
       icon: '🎮',
@@ -34,7 +34,7 @@ export const useStyleStore = defineStore('style', () => {
       fontBody: '"Noto Sans SC", "Microsoft YaHei", sans-serif',
     },
     cute: {
-      name: '可爱风',
+      name: '巨魔深',
       tagline: 'SWEETY DAYS',
       logo: '/logo-cute.png',
       icon: '🌸',
@@ -64,7 +64,7 @@ export const useStyleStore = defineStore('style', () => {
       fontBody: 'Nunito, sans-serif',
     },
     qver: {
-      name: 'Q版',
+      name: '巨魔深',
       tagline: 'CHILL VIBES',
       logo: '/logo-qver.png',
       icon: '⚡',
@@ -124,6 +124,12 @@ export const useStyleStore = defineStore('style', () => {
     root.style.setProperty('--font-display', t.fontDisplay)
     root.style.setProperty('--font-body', t.fontBody)
     document.body.style.background = t.colors.bg
+
+    // 更新Favicon
+    const favicon = document.getElementById('favicon')
+    if (favicon) {
+      favicon.href = '/logo-' + name + '.ico'
+    }
   }
 
   return { themes, currentTheme, theme, setTheme, applyTheme }

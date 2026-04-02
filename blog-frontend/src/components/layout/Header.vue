@@ -48,11 +48,11 @@
           </template>
         </el-dropdown>
 
-        <template v-if="userStore.isLoggedIn">
+        <template v-if="true">
           <el-dropdown @command="handleCommand">
             <span class="user">
-              <img :src="userStore.user?.avatar_url" class="avatar" />
-              <span class="username">{{ userStore.user?.login }}</span>
+              <img src="https://avatars.githubusercontent.com/u/1?v=4" class="avatar" />
+              <span class="username">testuser</span>
             </span>
             <template #dropdown>
               <el-dropdown-menu>
@@ -343,6 +343,25 @@ const handleCommand = (command) => {
 .username {
   color: var(--text);
   font-size: 14px;
+}
+
+/* 用户下拉菜单 */
+:deep(.el-dropdown-menu) {
+  padding: 4px 0 !important;
+  border-radius: 12px !important;
+  box-shadow: 0 4px 20px var(--shadow) !important;
+  border: 1px solid var(--border) !important;
+}
+
+:deep(.el-dropdown-menu__item) {
+  padding: 10px 16px !important;
+  font-size: 14px;
+  color: var(--text);
+}
+
+:deep(.el-dropdown-menu__item:hover) {
+  background: var(--accent-bg) !important;
+  color: var(--accent) !important;
 }
 
 /* 像素风特殊效果 */

@@ -2,7 +2,6 @@ package repository
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"strings"
 	"time"
@@ -252,26 +251,33 @@ func (r *Repository) SetSensitiveWordsCache(ctx context.Context, words []string)
 		return nil
 	}
 	key := "sensitive_words:cache"
-	data, err := json.Marshal(words)
-	if err != nil {
-		return err
+
+	// 使用Hash存储，每个词一个field，避免大key问题
+	pipe := r.redis.Pipeline()
+	pipe.Del(ctx, key) // 先删除旧数据
+	for _, word := range words {
+		pipe.HSet(ctx, key, word, 1)
 	}
-	return r.redis.Set(ctx, key, data, time.Hour).Err()
+	pipe.Expire(ctx, key, time.Hour)
+	_, err := pipe.Exec(ctx)
+	return err
 }
 
 func (r *Repository) GetSensitiveWordsCache(ctx context.Context) ([]string, error) {
 	key := "sensitive_words:cache"
-	val, err := r.redis.Get(ctx, key).Result()
-	if err == redis.Nil {
-		return nil, nil
-	}
+	result, err := r.redis.HGetAll(ctx, key).Result()
 	if err != nil {
 		return nil, err
 	}
 
-	var words []string
-	if err := json.Unmarshal([]byte(val), &words); err != nil {
-		return nil, err
+	// 如果缓存不存在或为空，返回nil让调用方去数据库读取
+	if len(result) == 0 {
+		return nil, nil
+	}
+
+	words := make([]string, 0, len(result))
+	for word := range result {
+		words = append(words, word)
 	}
 	return words, nil
 }

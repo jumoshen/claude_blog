@@ -215,8 +215,8 @@ func (h *CommentHandler) CreateComment(c *gin.Context) {
 		}
 	}
 
-	// 敏感词检测
-	if h.svc.ContainsSensitiveWords(req.Content) {
+	// 敏感词检测（昵称和内容）
+	if h.svc.ContainsSensitiveWords(req.Nickname) || h.svc.ContainsSensitiveWords(req.Content) {
 		response.Error(c, 400, "评论包含不当内容，请修改后重试")
 		return
 	}

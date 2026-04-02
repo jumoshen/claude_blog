@@ -30,6 +30,7 @@ type Comment struct {
 	DeviceID  string
 	UserAgent string
 	Status    int
+	IsFake    bool
 }
 
 var nicknames = []string{
@@ -184,8 +185,8 @@ func generateComment(post Post, rdb *redis.Client) Comment {
 	// Generate random IP
 	ip := fmt.Sprintf("192.168.%d.%d", rand.Intn(256), rand.Intn(256))
 
-	// Generate device ID
-	deviceID := fmt.Sprintf("dev_%d", rand.Int63())
+	// Generate device ID with FAKE_ prefix
+	deviceID := fmt.Sprintf("FAKE_%d", rand.Int63())
 
 	return Comment{
 		PostSlug:  post.Slug,
@@ -196,6 +197,7 @@ func generateComment(post Post, rdb *redis.Client) Comment {
 		DeviceID:  deviceID,
 		UserAgent: "Mozilla/5.0",
 		Status:    1,
+		IsFake:    true,
 	}
 }
 

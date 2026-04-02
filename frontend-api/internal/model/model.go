@@ -46,6 +46,7 @@ type Comment struct {
 	DeviceID  string `gorm:"size:64;index"`
 	UserAgent string `gorm:"size:500"`
 	Status    int    `gorm:"default:1;index"` // 1=正常 0=待审核 -1=违规
+	IsFake    bool   `gorm:"default:false"`   // 是否为假数据
 }
 
 type SensitiveWord struct {

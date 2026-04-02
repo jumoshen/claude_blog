@@ -3,6 +3,7 @@ package service
 import (
 	"bytes"
 	"context"
+	"fmt"
 	"io"
 	"os"
 	"path/filepath"
@@ -412,4 +413,144 @@ func (s *Service) RecordVisit(slug, ip, userAgent string, userID int64) {
 	go func() {
 		s.repo.CreateVisit(visit)
 	}()
+}
+
+// Comment operations
+func (s *Service) CreateComment(comment *model.Comment) error {
+	return s.repo.CreateComment(comment)
+}
+
+func (s *Service) GetCommentsByPostSlug(postSlug string, limit int) ([]model.Comment, error) {
+	return s.repo.GetCommentsByPostSlug(postSlug, limit)
+}
+
+// CheckCommentRateLimit 检查评论频率限制
+// 匿名用户: IP每分钟3条 + DeviceID每分钟5条
+// 登录用户: UserID每10秒1条
+func (s *Service) CheckCommentRateLimit(ctx context.Context, ip, deviceID string, userID int64) (bool, error) {
+	if userID > 0 {
+		// 登录用户：每10秒1条
+		key := fmt.Sprintf("comment:rate:user:%d", userID)
+		count, err := s.repo.IncrCommentRateLimit(ctx, key, 10*time.Second)
+		if err != nil {
+			return true, err
+		}
+		return count <= 1, nil
+	}
+
+	// 匿名用户：IP每分钟3条
+	ipKey := fmt.Sprintf("comment:rate:ip:%s", ip)
+	ipCount, err := s.repo.IncrCommentRateLimit(ctx, ipKey, time.Minute)
+	if err != nil {
+		return true, err
+	}
+	if ipCount > 3 {
+		return false, nil
+	}
+
+	// DeviceID每分钟5条
+	if deviceID != "" {
+		deviceKey := fmt.Sprintf("comment:rate:device:%s", deviceID)
+		deviceCount, err := s.repo.IncrCommentRateLimit(ctx, deviceKey, time.Minute)
+		if err != nil {
+			return true, err
+		}
+		return deviceCount <= 5, nil
+	}
+
+	return true, nil
+}
+
+// ContainsSensitiveWords 检测敏感词
+func (s *Service) ContainsSensitiveWords(content string) bool {
+	words, err := s.GetSensitiveWords()
+	if err != nil {
+		// 如果获取失败，使用内存检测作为fallback
+		return s.checkSensitiveWordsFallback(content)
+	}
+
+	if len(words) == 0 {
+		return false
+	}
+
+	for _, word := range words {
+		if containsString(content, word) {
+			return true
+		}
+	}
+	return false
+}
+
+// GetSensitiveWords 获取敏感词列表（带缓存）
+func (s *Service) GetSensitiveWords() ([]string, error) {
+	ctx := context.Background()
+
+	// 先从缓存获取
+	words, err := s.repo.GetSensitiveWordsCache(ctx)
+	if err == nil && words != nil {
+		return words, nil
+	}
+
+	// 缓存没有，从数据库获取
+	dbWords, err := s.repo.GetAllSensitiveWords()
+	if err != nil {
+		return nil, err
+	}
+
+	words = make([]string, 0, len(dbWords))
+	for _, w := range dbWords {
+		words = append(words, w.Word)
+	}
+
+	// 更新缓存
+	if len(words) > 0 {
+		s.repo.SetSensitiveWordsCache(ctx, words)
+	}
+
+	return words, nil
+}
+
+// InvalidateSensitiveWordsCache 使敏感词缓存失效
+func (s *Service) InvalidateSensitiveWordsCache() error {
+	return s.repo.InvalidateSensitiveWordsCache(context.Background())
+}
+
+// checkSensitiveWordsFallback 敏感词检测fallback（内存检测）
+func (s *Service) checkSensitiveWordsFallback(content string) bool {
+	fallbackWords := []string{
+		"习近平", "毛主席", "周恩来", "刘少奇", "朱德", "邓小平",
+		"傻逼", "傻b", "sb", "操", "艹", "妈逼", "妈b", "mb",
+		"fuck", "shit", "色情", "赌博", "赌场", "澳门赌场",
+	}
+
+	for _, word := range fallbackWords {
+		if containsString(content, word) {
+			return true
+		}
+	}
+	return false
+}
+
+func containsString(s, substr string) bool {
+	sLower := toLower(s)
+	substrLower := toLower(substr)
+
+	for i := 0; i <= len(sLower)-len(substrLower); i++ {
+		if sLower[i:i+len(substrLower)] == substrLower {
+			return true
+		}
+	}
+	return false
+}
+
+func toLower(s string) string {
+	var result []byte
+	for i := 0; i < len(s); i++ {
+		c := s[i]
+		if c >= 'A' && c <= 'Z' {
+			c += 'a' - 'A'
+		}
+		result = append(result, c)
+	}
+	return string(result)
 }

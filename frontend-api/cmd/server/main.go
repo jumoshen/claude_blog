@@ -68,6 +68,7 @@ func main() {
 	// Initialize handlers
 	authHandler := handler.NewAuthHandler(svc, cfg, l, jwtUtil)
 	postHandler := handler.NewPostHandler(svc, l)
+	commentHandler := handler.NewCommentHandler(svc, l)
 
 	// Setup Gin
 	gin.SetMode(gin.ReleaseMode)
@@ -110,6 +111,16 @@ func main() {
 			auth.POST("/logout", middleware.AuthMiddleware(jwtUtil), authHandler.Logout)
 			auth.GET("/me", middleware.AuthMiddleware(jwtUtil), authHandler.Me)
 		}
+
+		// Comment routes
+		comments := v1.Group("/comments")
+		{
+			comments.GET("/:postSlug", commentHandler.GetComments)
+			comments.POST("", commentHandler.CreateComment)
+		}
+
+		// WebSocket route for comments
+		r.GET("/ws/comments/:postSlug", commentHandler.HandleWebSocket)
 
 		// Admin routes (protected)
 		admin := v1.Group("/admin")

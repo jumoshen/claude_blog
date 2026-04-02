@@ -35,3 +35,21 @@ type Visit struct {
 	IP        string `gorm:"size:50"`
 	UserAgent string `gorm:"size:500"`
 }
+
+type Comment struct {
+	gorm.Model
+	PostSlug  string `gorm:"size:200;index"`
+	UserID    int64  `gorm:"index"`
+	Nickname  string `gorm:"size:50"`
+	Content   string `gorm:"type:text"`
+	IP        string `gorm:"size:50;index"`
+	DeviceID  string `gorm:"size:64;index"`
+	UserAgent string `gorm:"size:500"`
+	Status    int    `gorm:"default:1;index"` // 1=正常 0=待审核 -1=违规
+}
+
+type SensitiveWord struct {
+	gorm.Model
+	Word  string `gorm:"size:100;uniqueIndex"`
+	Level int    `gorm:"default:1"`
+}

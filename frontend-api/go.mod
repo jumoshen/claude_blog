@@ -5,11 +5,11 @@ go 1.23.0
 toolchain go1.24.5
 
 require (
-	github.com/gin-contrib/sessions v1.0.4
 	github.com/gin-gonic/gin v1.10.1
 	github.com/go-redis/redis/v8 v8.11.5
 	github.com/golang-jwt/jwt/v5 v5.2.0
 	github.com/google/go-github/v50 v50.2.0
+	github.com/gorilla/websocket v1.5.1
 	github.com/spf13/viper v1.18.2
 	github.com/yuin/goldmark v1.6.0
 	gopkg.in/natefinch/lumberjack.v2 v2.2.1
@@ -36,9 +36,6 @@ require (
 	github.com/goccy/go-json v0.10.5 // indirect
 	github.com/golang/protobuf v1.5.3 // indirect
 	github.com/google/go-querystring v1.1.0 // indirect
-	github.com/gorilla/context v1.1.2 // indirect
-	github.com/gorilla/securecookie v1.1.2 // indirect
-	github.com/gorilla/sessions v1.4.0 // indirect
 	github.com/hashicorp/hcl v1.0.0 // indirect
 	github.com/jinzhu/inflection v1.0.0 // indirect
 	github.com/jinzhu/now v1.1.5 // indirect

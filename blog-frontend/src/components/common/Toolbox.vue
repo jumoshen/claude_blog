@@ -7,6 +7,14 @@
     <!-- 展开内容 -->
     <transition name="expand">
       <div v-show="isExpanded" class="toolbox-content">
+        <!-- 弹幕控制 -->
+        <DanmuControl
+          @update:enabled="onDanmuEnabledChange"
+          @update:density="onDanmuDensityChange"
+          @update:fontSize="onDanmuFontSizeChange"
+          @update:fontColor="onDanmuFontColorChange"
+        />
+
         <!-- 骰子工具 -->
         <div
           class="tool-btn dice-btn"
@@ -14,31 +22,35 @@
           @click="goRandom"
           title="随机文章"
         >
-          <div class="dice-container" :class="{ 'is-rolling': isRolling }">
-            <div class="dice-shadow"></div>
-            <div class="dice" :style="diceStyle">
-              <div class="dice-face face-1"><span class="dot"></span></div>
-              <div class="dice-face face-2"><span class="dot"></span><span class="dot"></span></div>
-              <div class="dice-face face-3"><span class="dot"></span><span class="dot"></span><span class="dot"></span></div>
-              <div class="dice-face face-4"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span></div>
-              <div class="dice-face face-5"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span></div>
-              <div class="dice-face face-6"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span></div>
+          <div class="dice-wrapper">
+            <div class="dice-container" :class="{ 'is-rolling': isRolling }">
+              <div class="dice-shadow"></div>
+              <div class="dice" :style="diceStyle">
+                <div class="dice-face face-1"><span class="dot"></span></div>
+                <div class="dice-face face-2"><span class="dot"></span><span class="dot"></span></div>
+                <div class="dice-face face-3"><span class="dot"></span><span class="dot"></span><span class="dot"></span></div>
+                <div class="dice-face face-4"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span></div>
+                <div class="dice-face face-5"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span></div>
+                <div class="dice-face face-6"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span></div>
+              </div>
             </div>
+            <span class="tool-label">{{ isRolling ? '摇啊摇...' : '随机文章' }}</span>
           </div>
-          <span class="tool-label">{{ isRolling ? '摇啊摇...' : '随机文章' }}</span>
         </div>
 
-        <!-- 翻牌工具 - 占位 -->
+        <!-- 翻牌工具 -->
         <div
           class="tool-btn card-btn"
           :class="['theme-' + styleStore.currentTheme]"
           @click="flipCard"
           title="翻牌"
         >
-          <div class="card-icon">
-            <span class="card-back">?</span>
+          <div class="card-wrapper">
+            <div class="card-icon">
+              <span class="card-back">?</span>
+            </div>
+            <span class="tool-label">翻牌</span>
           </div>
-          <span class="tool-label">翻牌</span>
         </div>
       </div>
     </transition>
@@ -56,6 +68,7 @@ import { useRouter } from 'vue-router'
 import { useStyleStore } from '../../store/style'
 import api from '../../api'
 import LuckyDrawModal from './LuckyDrawModal.vue'
+import DanmuControl from './DanmuControl.vue'
 
 const router = useRouter()
 const styleStore = useStyleStore()
@@ -64,6 +77,42 @@ const isRolling = ref(false)
 const showCardModal = ref(false)
 const diceResult = ref(null)
 const diceStyle = ref({})
+
+// Danmu settings
+const emit = defineEmits(['danmu-settings-change'])
+const danmuEnabled = ref(true)
+const danmuDensity = ref(6)
+const danmuFontSize = ref(16)
+const danmuFontColor = ref('#ffffff')
+
+const onDanmuEnabledChange = (enabled) => {
+  danmuEnabled.value = enabled
+  emitDanmuSettings()
+}
+
+const onDanmuDensityChange = (density) => {
+  danmuDensity.value = density
+  emitDanmuSettings()
+}
+
+const onDanmuFontSizeChange = (fontSize) => {
+  danmuFontSize.value = fontSize
+  emitDanmuSettings()
+}
+
+const onDanmuFontColorChange = (fontColor) => {
+  danmuFontColor.value = fontColor
+  emitDanmuSettings()
+}
+
+const emitDanmuSettings = () => {
+  emit('danmu-settings-change', {
+    enabled: danmuEnabled.value,
+    density: danmuDensity.value,
+    fontSize: danmuFontSize.value,
+    fontColor: danmuFontColor.value
+  })
+}
 
 // 面角度映射：每个点数对应的旋转角度
 const FACE_ANGLES = {
@@ -95,6 +144,7 @@ const rollDice = (targetFace) => {
   }, 50)
 }
 
+// 随机文章
 const goRandom = async () => {
   if (isRolling.value) return
 
@@ -191,7 +241,7 @@ const flipCard = () => {
   transition: color 0.3s;
 }
 
-/* 工具按钮 */
+/* 工具按钮 - 统一样式 */
 .tool-btn {
   display: flex;
   flex-direction: column;
@@ -217,6 +267,14 @@ const flipCard = () => {
 /* 骰子按钮 */
 .dice-btn.rolling {
   pointer-events: none;
+}
+
+/* 骰子包装 - 图标和文字在一起 */
+.dice-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
 }
 
 /* 3D 骰子容器 */
@@ -388,6 +446,14 @@ const flipCard = () => {
 .face-5 .dot:nth-child(5) { grid-area: 3 / 3; justify-self: end; align-self: end; }
 
 .face-6 { place-items: center; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr 1fr; }
+
+/* 翻牌包装 */
+.card-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
 
 /* 翻牌图标 */
 .card-icon {

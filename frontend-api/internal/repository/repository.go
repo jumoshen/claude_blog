@@ -2,6 +2,7 @@ package repository
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"strings"
 	"time"
@@ -28,7 +29,7 @@ func New(cfg *config.Config) (*Repository, error) {
 		return nil, fmt.Errorf("failed to connect to database: %w", err)
 	}
 
-	// Auto migrate
+	// Auto migrate (only for basic tables, use migrations/ for schema changes)
 	db.AutoMigrate(&model.Post{}, &model.User{}, &model.Visit{})
 
 	// Connect to Redis
@@ -198,4 +199,84 @@ func (r *Repository) GetAllCategories() (map[string]int, error) {
 // CreateVisit 创建访问记录
 func (r *Repository) CreateVisit(visit *model.Visit) error {
 	return r.db.Create(visit).Error
+}
+
+// Comment operations
+func (r *Repository) CreateComment(comment *model.Comment) error {
+	return r.db.Create(comment).Error
+}
+
+func (r *Repository) GetCommentsByPostSlug(postSlug string, limit int) ([]model.Comment, error) {
+	var comments []model.Comment
+	if err := r.db.Where("post_slug = ? AND status = 1", postSlug).
+		Order("created_at DESC").
+		Limit(limit).
+		Find(&comments).Error; err != nil {
+		return nil, err
+	}
+	return comments, nil
+}
+
+// IncrCommentRateLimit 增加评论频率限制计数
+func (r *Repository) IncrCommentRateLimit(ctx context.Context, key string, window time.Duration) (int64, error) {
+	pipe := r.redis.Pipeline()
+	incr := pipe.Incr(ctx, key)
+	pipe.Expire(ctx, key, window)
+	_, err := pipe.Exec(ctx)
+	if err != nil {
+		return 0, err
+	}
+	return incr.Val(), nil
+}
+
+// GetCommentRateLimit 获取评论频率限制计数
+func (r *Repository) GetCommentRateLimit(ctx context.Context, key string) (int64, error) {
+	val, err := r.redis.Get(ctx, key).Int64()
+	if err == redis.Nil {
+		return 0, nil
+	}
+	return val, err
+}
+
+// SensitiveWord operations
+func (r *Repository) GetAllSensitiveWords() ([]model.SensitiveWord, error) {
+	var words []model.SensitiveWord
+	if err := r.db.Where("deleted_at IS NULL").Find(&words).Error; err != nil {
+		return nil, err
+	}
+	return words, nil
+}
+
+func (r *Repository) SetSensitiveWordsCache(ctx context.Context, words []string) error {
+	if len(words) == 0 {
+		return nil
+	}
+	key := "sensitive_words:cache"
+	data, err := json.Marshal(words)
+	if err != nil {
+		return err
+	}
+	return r.redis.Set(ctx, key, data, time.Hour).Err()
+}
+
+func (r *Repository) GetSensitiveWordsCache(ctx context.Context) ([]string, error) {
+	key := "sensitive_words:cache"
+	val, err := r.redis.Get(ctx, key).Result()
+	if err == redis.Nil {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+
+	var words []string
+	if err := json.Unmarshal([]byte(val), &words); err != nil {
+		return nil, err
+	}
+	return words, nil
+}
+
+func (r *Repository) InvalidateSensitiveWordsCache(ctx context.Context) error {
+	key := "sensitive_words:cache"
+	return r.redis.Del(ctx, key).Err()
 }

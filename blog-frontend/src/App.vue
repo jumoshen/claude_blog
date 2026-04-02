@@ -1,13 +1,50 @@
 <script setup>
-import { onMounted } from 'vue'
+import { onMounted, ref, provide, reactive } from 'vue'
 import Header from './components/layout/Header.vue'
 import Footer from './components/layout/Footer.vue'
 import Decorations from './components/common/Decorations.vue'
 import ReadingProgress from './components/common/ReadingProgress.vue'
 import Toolbox from './components/common/Toolbox.vue'
+import DanmuLayer from './components/common/DanmuLayer.vue'
 import { useStyleStore } from './store/style'
 
 const styleStore = useStyleStore()
+
+// Danmu state - shared across app
+const danmuLayer = ref(null)
+const danmuSettings = reactive({
+  enabled: true,
+  density: 6,
+  fontSize: 16,
+  fontColor: '#ffffff'
+})
+
+// Load settings from localStorage
+const saved = localStorage.getItem('danmu-settings')
+if (saved) {
+  try {
+    Object.assign(danmuSettings, JSON.parse(saved))
+  } catch (e) {}
+}
+
+const handleDanmuSettingsChange = (settings) => {
+  Object.assign(danmuSettings, settings)
+  localStorage.setItem('danmu-settings', JSON.stringify(settings))
+}
+
+// Provide danmu functions to children
+provide('danmuLayer', danmuLayer)
+provide('danmuSettings', danmuSettings)
+provide('addDanmu', (comment) => {
+  if (danmuLayer.value && danmuSettings.enabled) {
+    danmuLayer.value.addDanmu(comment)
+  }
+})
+provide('clearDanmus', () => {
+  if (danmuLayer.value) {
+    danmuLayer.value.clearAllDanmus()
+  }
+})
 
 onMounted(() => {
   styleStore.applyTheme(styleStore.currentTheme)
@@ -18,7 +55,14 @@ onMounted(() => {
   <div id="app">
     <Decorations />
     <ReadingProgress />
-    <Toolbox />
+    <Toolbox @danmu-settings-change="handleDanmuSettingsChange" />
+    <DanmuLayer
+      ref="danmuLayer"
+      :visible="danmuSettings.enabled"
+      :density="danmuSettings.density"
+      :fontSize="danmuSettings.fontSize"
+      :fontColor="danmuSettings.fontColor"
+    />
     <Header />
     <main class="main">
       <router-view :key="$route.fullPath" />

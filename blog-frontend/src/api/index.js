@@ -48,6 +48,10 @@ export default {
   logout: () => api.post('/auth/logout'),
   getMe: () => api.get('/auth/me'),
 
+  // Comments
+  getComments: (postSlug) => api.get(`/comments/${postSlug}`),
+  createComment: (data) => api.post('/comments', data),
+
   // Admin
   refresh: () => api.post('/admin/refresh'),
 }

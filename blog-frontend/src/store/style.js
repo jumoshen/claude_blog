@@ -4,7 +4,7 @@ import { ref, computed } from 'vue'
 export const useStyleStore = defineStore('style', () => {
   const themes = {
     pixel: {
-      name: '巨魔深',
+      name: '像素风',
       tagline: '8-BIT RETRO',
       logo: '/logo-pixel.png',
       icon: '🎮',
@@ -34,7 +34,7 @@ export const useStyleStore = defineStore('style', () => {
       fontBody: '"Noto Sans SC", "Microsoft YaHei", sans-serif',
     },
     cute: {
-      name: '巨魔深',
+      name: '可爱风',
       tagline: 'SWEETY DAYS',
       logo: '/logo-cute.png',
       icon: '🌸',
@@ -64,7 +64,7 @@ export const useStyleStore = defineStore('style', () => {
       fontBody: 'Nunito, sans-serif',
     },
     qver: {
-      name: '巨魔深',
+      name: 'Q版',
       tagline: 'CHILL VIBES',
       logo: '/logo-qver.png',
       icon: '⚡',

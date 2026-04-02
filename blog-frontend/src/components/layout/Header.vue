@@ -48,19 +48,11 @@
           </template>
         </el-dropdown>
 
-        <template v-if="true">
+        <template v-if="userStore.isLoggedIn">
           <el-dropdown @command="handleCommand" trigger="click" :show-timeout="150" :hide-timeout="150" popper-class="user-dropdown-popper">
             <span class="user">
-              <div class="avatar-wrapper">
-                <img src="https://avatars.githubusercontent.com/u/1?v=4" class="avatar" />
-                <div class="avatar-ring"></div>
-              </div>
-              <span class="username">testuser</span>
-              <span class="user-arrow">
-                <svg width="10" height="10" viewBox="0 0 10 10" fill="currentColor">
-                  <path d="M2 3.5L5 6.5L8 3.5" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round"/>
-                </svg>
-              </span>
+              <img :src="userStore.user?.avatar_url" class="avatar" />
+              <span class="username">{{ userStore.user?.login }}</span>
             </span>
             <template #dropdown>
               <el-dropdown-menu class="user-dropdown-menu">
@@ -341,69 +333,25 @@ const handleCommand = (command) => {
   align-items: center;
   gap: 8px;
   cursor: pointer;
-  padding: 6px 12px;
-  border-radius: 24px;
-  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  padding: 4px 8px;
+  border-radius: 8px;
+  transition: background 0.2s;
 }
 
 .user:hover {
   background: var(--accent-bg);
 }
 
-.avatar-wrapper {
-  position: relative;
-  width: 32px;
-  height: 32px;
-}
-
 .avatar {
   width: 32px;
   height: 32px;
   border-radius: 50%;
-  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-  position: relative;
-  z-index: 1;
-}
-
-.avatar-ring {
-  position: absolute;
-  inset: -3px;
-  border-radius: 50%;
-  border: 2px solid transparent;
-  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.user:hover .avatar {
-  transform: scale(1.05);
-}
-
-.user:hover .avatar-ring {
-  border-color: var(--accent);
-  box-shadow: 0 0 12px var(--accent);
+  border: 2px solid var(--border);
 }
 
 .username {
   color: var(--text);
   font-size: 14px;
-  font-weight: 500;
-  transition: color 0.2s;
-}
-
-.user:hover .username {
-  color: var(--accent);
-}
-
-.user-arrow {
-  color: var(--text);
-  opacity: 0.5;
-  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-  display: flex;
-  align-items: center;
-}
-
-.user:hover .user-arrow {
-  opacity: 1;
-  transform: rotate(180deg);
 }
 
 .menu-icon {

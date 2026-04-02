@@ -63,7 +63,7 @@
               </span>
             </span>
             <template #dropdown>
-              <div class="dropdown-wrapper">
+              <el-dropdown-menu class="user-dropdown-menu">
                 <el-dropdown-item command="logout" class="logout-item">
                   <span class="logout-icon">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -74,7 +74,7 @@
                   </span>
                   <span>退出登录</span>
                 </el-dropdown-item>
-              </div>
+              </el-dropdown-menu>
             </template>
           </el-dropdown>
         </template>
@@ -411,29 +411,16 @@ const handleCommand = (command) => {
   transition: all 0.2s;
 }
 
-/* 下拉菜单包装器 */
-.dropdown-wrapper {
+/* 用户下拉菜单 */
+:deep(.user-dropdown-menu) {
+  padding: 8px !important;
   background: var(--card-bg) !important;
   border: 1px solid var(--border) !important;
   border-radius: 16px !important;
-  padding: 8px !important;
   min-width: 140px !important;
   box-shadow: 0 12px 40px var(--shadow) !important;
-  animation: dropdownEnter 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-@keyframes dropdownEnter {
-  from {
-    opacity: 0;
-    transform: translateY(-8px) scale(0.96);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
-}
-
-/* 退出按钮 */
 :deep(.logout-item) {
   padding: 10px 16px !important;
   margin: 2px 0 !important;

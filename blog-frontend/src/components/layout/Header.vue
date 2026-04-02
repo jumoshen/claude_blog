@@ -49,19 +49,32 @@
         </el-dropdown>
 
         <template v-if="true">
-          <el-dropdown @command="handleCommand" trigger="click">
+          <el-dropdown @command="handleCommand" trigger="click" :show-timeout="150" :hide-timeout="150">
             <span class="user">
-              <img src="https://avatars.githubusercontent.com/u/1?v=4" class="avatar" />
+              <div class="avatar-wrapper">
+                <img src="https://avatars.githubusercontent.com/u/1?v=4" class="avatar" />
+                <div class="avatar-ring"></div>
+              </div>
               <span class="username">testuser</span>
-              <span class="user-arrow">▾</span>
+              <span class="user-arrow">
+                <svg width="10" height="10" viewBox="0 0 10 10" fill="currentColor">
+                  <path d="M2 3.5L5 6.5L8 3.5" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+                </svg>
+              </span>
             </span>
             <template #dropdown>
-              <el-dropdown-menu>
-                <el-dropdown-item command="logout">
-                  <span class="menu-icon">🚪</span>
-                  退出登录
+              <div class="dropdown-wrapper">
+                <el-dropdown-item command="logout" class="logout-item">
+                  <span class="logout-icon">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+                      <polyline points="16,17 21,12 16,7"/>
+                      <line x1="21" y1="12" x2="9" y2="12"/>
+                    </svg>
+                  </span>
+                  <span>退出登录</span>
                 </el-dropdown-item>
-              </el-dropdown-menu>
+              </div>
             </template>
           </el-dropdown>
         </template>
@@ -328,93 +341,130 @@ const handleCommand = (command) => {
   align-items: center;
   gap: 8px;
   cursor: pointer;
-  padding: 4px 8px;
-  border-radius: 8px;
-  transition: background 0.2s;
+  padding: 6px 12px;
+  border-radius: 24px;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .user:hover {
   background: var(--accent-bg);
 }
 
+.avatar-wrapper {
+  position: relative;
+  width: 32px;
+  height: 32px;
+}
+
 .avatar {
   width: 32px;
   height: 32px;
   border-radius: 50%;
-  border: 2px solid var(--border);
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  z-index: 1;
+}
+
+.avatar-ring {
+  position: absolute;
+  inset: -3px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.user:hover .avatar {
+  transform: scale(1.05);
+}
+
+.user:hover .avatar-ring {
+  border-color: var(--accent);
+  box-shadow: 0 0 12px var(--accent);
 }
 
 .username {
   color: var(--text);
   font-size: 14px;
+  font-weight: 500;
+  transition: color 0.2s;
+}
+
+.user:hover .username {
+  color: var(--accent);
 }
 
 .user-arrow {
-  font-size: 10px;
   color: var(--text);
-  opacity: 0.6;
-  margin-left: 2px;
-  transition: transform 0.2s;
+  opacity: 0.5;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  display: flex;
+  align-items: center;
 }
 
 .user:hover .user-arrow {
+  opacity: 1;
   transform: rotate(180deg);
 }
 
 .menu-icon {
-  font-size: 14px;
+  font-size: 16px;
+  transition: all 0.2s;
 }
 
-/* 用户下拉菜单 - Glassmorphism */
-.user {
-  position: relative;
-}
-
-:deep(.el-dropdown-menu) {
-  padding: 8px !important;
+/* 下拉菜单包装器 */
+.dropdown-wrapper {
   background: var(--card-bg) !important;
   border: 1px solid var(--border) !important;
-  border-radius: 16px !important;
-  box-shadow:
-    0 8px 32px var(--shadow),
-    0 0 0 1px rgba(255,255,255,0.1) inset !important;
-  backdrop-filter: blur(20px) saturate(180%) !important;
-  -webkit-backdrop-filter: blur(20px) saturate(180%) !important;
-  min-width: 140px !important;
+  border-radius: 20px !important;
+  padding: 10px !important;
+  min-width: 160px !important;
+  box-shadow: 0 16px 48px var(--shadow) !important;
+  animation: dropdownEnter 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-:deep(.el-dropdown-menu__item) {
-  padding: 12px 16px !important;
-  margin: 2px 0;
-  border-radius: 10px !important;
+@keyframes dropdownEnter {
+  from {
+    opacity: 0;
+    transform: translateY(-12px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* 退出按钮 */
+:deep(.logout-item) {
+  padding: 14px 18px !important;
+  margin: 4px 0 !important;
+  border-radius: 14px !important;
   font-size: 14px !important;
   color: var(--text) !important;
+  background: transparent !important;
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
   display: flex !important;
   align-items: center !important;
-  gap: 10px !important;
+  gap: 12px !important;
 }
 
-:deep(.el-dropdown-menu__item::before) {
-  content: '';
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: var(--accent);
-  opacity: 0;
-  transform: scale(0);
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+:deep(.logout-item:hover) {
+  background: rgba(255, 80, 80, 0.08) !important;
+  color: #ff5050 !important;
+  transform: translateX(4px);
 }
 
-:deep(.el-dropdown-menu__item:hover) {
-  background: var(--accent-bg) !important;
-  color: var(--accent) !important;
-  padding-left: 20px !important;
+:deep(.logout-item:hover .logout-icon) {
+  transform: scale(1.1) rotate(-5deg);
+  color: #ff5050;
 }
 
-:deep(.el-dropdown-menu__item:hover::before) {
-  opacity: 1;
-  transform: scale(1);
+.logout-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  color: var(--text);
+  opacity: 0.6;
 }
 
 /* 像素风特殊效果 */

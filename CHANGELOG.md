@@ -1,5 +1,27 @@
 # 更新日志
 
+## v1.4.0 (2026-04-08)
+
+### AI 助手功能
+- [x] B端文章编辑器深度集成 AI 能力
+- [x] 支持选中文字后直接 AI 操作（润色/解释/扩展）
+- [x] AI 续写功能 - 在光标位置续写内容
+- [x] AI 生成标题 - 根据文章内容自动生成吸引人的标题
+- [x] Token 节省策略 - 选中操作只发送选中文案，续写只发送最后 2000 字符
+- [x] 预览模式 - AI 结果以原文/结果对比展示，用户确认后才应用
+- [x] SSE 流式输出 - 实时展示 AI 生成进度
+
+### 后端接口
+- [x] `POST /api/admin/ai/process_selection` - 处理选中文字（润色/解释/扩展）
+- [x] `POST /api/admin/ai/continue_writing` - 续写内容
+- [x] `POST /api/admin/ai/generate_title` - 生成标题
+- [x] MiniMax 模型支持
+
+### 数据库
+- [x] 新增 `ai_generations` 表 - 存储 AI 创作历史
+
+---
+
 ## v1.3.0 (2026-04-01)
 
 ### SEO优化

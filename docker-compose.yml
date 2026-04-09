@@ -65,6 +65,8 @@ services:
     container_name: cc-blog-admin-backend
     ports:
       - "8082:8080"
+    volumes:
+      - ./deploy/config-admin.yaml:/app/config.yaml:ro
     environment:
       - TZ=Asia/Shanghai
       - MINIO_ENDPOINT=file-service:9000

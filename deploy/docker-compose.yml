@@ -46,11 +46,8 @@ services:
   # C端服务
   # =====================
   frontend-api:
-    build:
-      context: ./frontend-api
-      dockerfile: Dockerfile
     container_name: cc-blog-api
-    image: jumoshen/claude_blog_api:latest
+    image: ghcr.io/jumoshen/claude-blog/frontend-api:latest
     ports:
       - "8080:8080"
     environment:
@@ -68,11 +65,8 @@ services:
     restart: always
 
   blog-frontend:
-    build:
-      context: ./blog-frontend
-      dockerfile: Dockerfile
     container_name: cc-blog-web
-    image: jumoshen/claude_blog_frontend:latest
+    image: ghcr.io/jumoshen/claude-blog/blog-frontend:latest
     ports:
       - "3000:80"
     networks:
@@ -106,11 +100,8 @@ services:
     restart: always
 
   admin-frontend:
-    build:
-      context: ./claude-blog-admin/blog-admin-frontend
-      dockerfile: Dockerfile
     container_name: cc-blog-admin-frontend
-    image: jumoshen/claude_blog_admin_frontend:latest
+    image: ghcr.io/jumoshen/claude-blog-admin/admin-frontend:latest
     ports:
       - "3001:80"
     networks:

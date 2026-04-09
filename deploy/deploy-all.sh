@@ -67,28 +67,22 @@ main() {
     ssh_cmd "echo ${GITHUB_TOKEN} | docker login ${GHCR_REGISTRY} -u ${GHCR_OWNER} --password-stdin"
 
     # Step 4: 拉取 GitHub 构建的镜像
-    log_step "4. 拉取 B 端镜像..."
-    log "   拉取 B端 Backend..."
-    ssh_cmd "docker pull ${GHCR_REGISTRY}/${GHCR_OWNER}/claude-blog-admin/admin-backend:latest"
-    log "   拉取 B端 Frontend..."
-    ssh_cmd "docker pull ${GHCR_REGISTRY}/${GHCR_OWNER}/claude-blog-admin/admin-frontend:latest"
-
-    # Step 5: 构建 C端镜像 (C 端不使用 GitHub Actions)
-    log_step "5. 构建 C端 Docker 镜像..."
+    log_step "4. 拉取镜像..."
 
     # 确保网络存在
     ssh_cmd "docker network create blogdeploy_blog-network 2>/dev/null || true"
 
-    # 构建 C端
-    log "   构建 C端 API..."
-    ssh_cmd "cd $SERVER_DEPLOY_PATH/frontend-api && docker build -t ${REGISTRY}/${PROJECT_PREFIX}/claude_blog_api:latest ."
-    log "   构建 C端 Frontend..."
-    ssh_cmd "cd $SERVER_DEPLOY_PATH/blog-frontend && docker build -t ${REGISTRY}/${PROJECT_PREFIX}/claude_blog_frontend:latest ."
+    # C端镜像
+    log "   拉取 C端 API..."
+    ssh_cmd "docker pull ${GHCR_REGISTRY}/${GHCR_OWNER}/claude-blog/frontend-api:latest"
+    log "   拉取 C端 Frontend..."
+    ssh_cmd "docker pull ${GHCR_REGISTRY}/${GHCR_OWNER}/claude-blog/blog-frontend:latest"
 
-    # 为 B 端镜像打上本地标签
-    log "   标记 B端镜像..."
-    ssh_cmd "docker tag ${GHCR_REGISTRY}/${GHCR_OWNER}/claude-blog-admin/admin-backend:latest ${REGISTRY}/${PROJECT_PREFIX}/claude_blog_admin_backend:latest"
-    ssh_cmd "docker tag ${GHCR_REGISTRY}/${GHCR_OWNER}/claude-blog-admin/admin-frontend:latest ${REGISTRY}/${PROJECT_PREFIX}/claude_blog_admin_frontend:latest"
+    # B端镜像
+    log "   拉取 B端 Backend..."
+    ssh_cmd "docker pull ${GHCR_REGISTRY}/${GHCR_OWNER}/claude-blog-admin/admin-backend:latest"
+    log "   拉取 B端 Frontend..."
+    ssh_cmd "docker pull ${GHCR_REGISTRY}/${GHCR_OWNER}/claude-blog-admin/admin-frontend:latest"
 
     # Step 6: 停止并删除所有旧服务
     log_step "4. 停止并删除旧服务..."

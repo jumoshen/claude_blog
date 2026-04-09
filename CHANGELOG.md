@@ -1,5 +1,26 @@
 # 更新日志
 
+## v1.5.0 (2026-04-09)
+
+### 镜像构建优化
+
+- [x] C端 (frontend-api, blog-frontend) 全面切换到 GitHub Actions 构建
+- [x] 使用 GitHub Container Registry (ghcr.io) 托管镜像
+- [x] 解决服务器 1.7GB 内存 Docker 构建 OOM 问题
+
+### 部署修复
+
+- [x] docker-compose.yml B端改用 ghcr.io 预构建镜像
+- [x] deploy-all.sh 改用 GitHub Container Registry 拉取所有镜像
+- [x] 修复 config-admin.yaml 缺少 AI 配置导致 AI 接口返回空内容
+- [x] deploy-all.sh 添加 `docker compose pull` 步骤确保使用最新镜像
+
+### 文档
+
+- [x] 添加 AI 功能说明到产品文档
+
+---
+
 ## v1.4.0 (2026-04-08)
 
 ### AI 助手功能

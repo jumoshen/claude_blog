@@ -16,6 +16,10 @@ SERVER_DEPLOY_PATH="/home/blog-deploy/claude_blog"
 REGISTRY=${REGISTRY:-docker.io}
 PROJECT_PREFIX=jumoshen
 
+# GitHub Container Registry (用于 B 端)
+GHCR_REGISTRY=ghcr.io
+GHCR_OWNER=jumoshen
+
 # 颜色
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -58,8 +62,19 @@ main() {
     log "   配置 Nginx..."
     ssh_cmd "cp $SERVER_DEPLOY_PATH/deploy/nginx.conf $SERVER_DEPLOY_PATH/nginx.conf"
 
-    # Step 3: 构建镜像
-    log_step "3. 构建 Docker 镜像..."
+    # Step 3: 登录 GitHub Container Registry
+    log_step "3. 登录 GitHub Container Registry..."
+    ssh_cmd "echo ${GITHUB_TOKEN} | docker login ${GHCR_REGISTRY} -u ${GHCR_OWNER} --password-stdin"
+
+    # Step 4: 拉取 GitHub 构建的镜像
+    log_step "4. 拉取 B 端镜像..."
+    log "   拉取 B端 Backend..."
+    ssh_cmd "docker pull ${GHCR_REGISTRY}/${GHCR_OWNER}/claude-blog-admin/admin-backend:latest"
+    log "   拉取 B端 Frontend..."
+    ssh_cmd "docker pull ${GHCR_REGISTRY}/${GHCR_OWNER}/claude-blog-admin/admin-frontend:latest"
+
+    # Step 5: 构建 C端镜像 (C 端不使用 GitHub Actions)
+    log_step "5. 构建 C端 Docker 镜像..."
 
     # 确保网络存在
     ssh_cmd "docker network create blogdeploy_blog-network 2>/dev/null || true"
@@ -70,37 +85,36 @@ main() {
     log "   构建 C端 Frontend..."
     ssh_cmd "cd $SERVER_DEPLOY_PATH/blog-frontend && docker build -t ${REGISTRY}/${PROJECT_PREFIX}/claude_blog_frontend:latest ."
 
-    # 构建 B端
-    log "   构建 B端 Backend..."
-    ssh_cmd "cd $SERVER_DEPLOY_PATH/claude-blog-admin/blog-admin-backend && docker build -t ${REGISTRY}/${PROJECT_PREFIX}/claude_blog_admin_backend:latest ."
-    log "   构建 B端 Frontend..."
-    ssh_cmd "cd $SERVER_DEPLOY_PATH/claude-blog-admin/blog-admin-frontend && docker build -t ${REGISTRY}/${PROJECT_PREFIX}/claude_blog_admin_frontend:latest ."
+    # 为 B 端镜像打上本地标签
+    log "   标记 B端镜像..."
+    ssh_cmd "docker tag ${GHCR_REGISTRY}/${GHCR_OWNER}/claude-blog-admin/admin-backend:latest ${REGISTRY}/${PROJECT_PREFIX}/claude_blog_admin_backend:latest"
+    ssh_cmd "docker tag ${GHCR_REGISTRY}/${GHCR_OWNER}/claude-blog-admin/admin-frontend:latest ${REGISTRY}/${PROJECT_PREFIX}/claude_blog_admin_frontend:latest"
 
-    # Step 4: 停止并删除所有旧服务
+    # Step 6: 停止并删除所有旧服务
     log_step "4. 停止并删除旧服务..."
     ssh_cmd "cd $SERVER_DEPLOY_PATH && docker compose down 2>/dev/null || true"
     ssh_cmd "docker ps -a --format '{{.Names}}' | grep -E '^cc-blog|^nginx-proxy' | xargs -r docker stop 2>/dev/null || true"
     ssh_cmd "docker ps -a --format '{{.Names}}' | grep -E '^cc-blog|^nginx-proxy' | xargs -r docker rm 2>/dev/null || true"
 
-    # Step 5: 启动新服务
+    # Step 7: 启动新服务
     log_step "5. 启动服务..."
     ssh_cmd "cd $SERVER_DEPLOY_PATH && docker compose up -d"
 
-    # Step 6: 等待服务启动
+    # Step 8: 等待服务启动
     log_step "6. 等待服务就绪..."
     sleep 5
 
-    # Step 7: 确保 MySQL 用户存在
+    # Step 9: 确保 MySQL 用户存在
     log_step "7. 初始化数据库..."
     ssh_cmd "docker exec cc-blog-mysql mysql -u root -pBlog2024Secure -e \"CREATE USER IF NOT EXISTS 'blog'@'%' IDENTIFIED BY 'Blog2024Secure'; GRANT ALL PRIVILEGES ON blog.* TO 'blog'@'%'; FLUSH PRIVILEGES;\" 2>/dev/null || true"
 
-    # Step 8: 检查状态
+    # Step 10: 检查状态
     log_step "8. 检查服务状态..."
     echo ""
     ssh_cmd "docker ps --format 'table {{.Names}}\t{{.Status}}' | grep -E 'cc-blog|nginx'"
     echo ""
 
-    # Step 9: 测试访问
+    # Step 11: 测试访问
     log_step "9. 测试访问..."
     HTTP_CODE=$(ssh_cmd "curl -s -o /dev/null -w '%{http_code}' http://localhost:3000/")
     if [ "$HTTP_CODE" = "200" ]; then

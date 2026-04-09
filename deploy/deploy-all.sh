@@ -85,14 +85,13 @@ main() {
     ssh_cmd "docker pull ${GHCR_REGISTRY}/${GHCR_OWNER}/claude-blog-admin/admin-frontend:latest"
 
     # Step 6: 停止并删除所有旧服务
-    log_step "4. 停止并删除旧服务..."
-    ssh_cmd "cd $SERVER_DEPLOY_PATH && docker compose down 2>/dev/null || true"
+    log_step "6. 停止并删除旧服务..."
     ssh_cmd "docker ps -a --format '{{.Names}}' | grep -E '^cc-blog|^nginx-proxy' | xargs -r docker stop 2>/dev/null || true"
     ssh_cmd "docker ps -a --format '{{.Names}}' | grep -E '^cc-blog|^nginx-proxy' | xargs -r docker rm 2>/dev/null || true"
 
-    # Step 7: 启动新服务
-    log_step "5. 启动服务..."
-    ssh_cmd "cd $SERVER_DEPLOY_PATH && docker compose up -d"
+    # Step 7: 拉取最新镜像并启动新服务
+    log_step "7. 拉取最新镜像并启动服务..."
+    ssh_cmd "cd $SERVER_DEPLOY_PATH && docker compose pull && docker compose up -d"
 
     # Step 8: 等待服务启动
     log_step "6. 等待服务就绪..."

@@ -83,11 +83,8 @@ services:
   # B端服务
   # =====================
   admin-backend:
-    build:
-      context: ./claude-blog-admin/blog-admin-backend
-      dockerfile: Dockerfile
     container_name: cc-blog-admin-backend
-    image: jumoshen/claude_blog_admin_backend:latest
+    image: ghcr.io/jumoshen/claude-blog-admin/admin-backend:latest
     ports:
       - "8082:8080"
     environment:

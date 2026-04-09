@@ -61,7 +61,7 @@ services:
     command: server /data --console-address ":9001"
 
   admin-backend:
-    build: ./claude-blog-admin/blog-admin-backend
+    image: ghcr.io/jumoshen/claude-blog-admin/admin-backend:latest
     container_name: cc-blog-admin-backend
     ports:
       - "8082:8080"
@@ -80,7 +80,7 @@ services:
       - cc-blog-net
 
   admin-frontend:
-    build: ./claude-blog-admin/blog-admin-frontend
+    image: ghcr.io/jumoshen/claude-blog-admin/admin-frontend:latest
     container_name: cc-blog-admin-frontend
     ports:
       - "3001:80"

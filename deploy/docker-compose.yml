@@ -97,7 +97,7 @@ services:
       - APP_ENV=production
       - GOPROXY=https://goproxy.cn,direct
     volumes:
-      - ./claude-blog-admin/blog-admin-backend/config.yaml:/app/config.yaml
+      - ./config-admin.yaml:/app/config.yaml
     depends_on:
       - mysql
       - minio

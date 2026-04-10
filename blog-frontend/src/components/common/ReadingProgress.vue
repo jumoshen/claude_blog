@@ -21,11 +21,39 @@ const route = useRoute()
 const progress = ref(0)
 const showBackToTop = ref(false)
 
+const getStorageKey = () => `reading_progress_${route.params.slug}`
+
+const saveProgress = () => {
+  if (route.params.slug) {
+    localStorage.setItem(getStorageKey(), progress.value.toString())
+  }
+}
+
+const restoreProgress = () => {
+  if (route.params.slug) {
+    const saved = localStorage.getItem(getStorageKey())
+    if (saved) {
+      const savedProgress = parseFloat(saved)
+      if (savedProgress > 0 && savedProgress < 100) {
+        // 恢复阅读位置
+        setTimeout(() => {
+          const docHeight = document.documentElement.scrollHeight - window.innerHeight
+          window.scrollTo({ top: (savedProgress / 100) * docHeight, behavior: 'instant' })
+          progress.value = savedProgress
+        }, 100)
+      }
+    }
+  }
+}
+
 const updateProgress = () => {
   const scrollTop = window.scrollY
   const docHeight = document.documentElement.scrollHeight - window.innerHeight
   progress.value = docHeight > 0 ? (scrollTop / docHeight) * 100 : 0
   showBackToTop.value = scrollTop > 500
+
+  // 保存进度
+  saveProgress()
 }
 
 const scrollToTop = () => {
@@ -36,10 +64,12 @@ const scrollToTop = () => {
 watch(() => route.path, () => {
   progress.value = 0
   showBackToTop.value = false
+  restoreProgress()
 })
 
 onMounted(() => {
   window.addEventListener('scroll', updateProgress)
+  restoreProgress()
 })
 
 onUnmounted(() => {

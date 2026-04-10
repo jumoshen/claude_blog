@@ -612,12 +612,12 @@ const formatCommentTime = (date) => {
 
 /* 评论区域 */
 .comment-section {
-  max-width: 800px;
+  max-width: 860px;
   margin: 30px auto 0;
   width: 100%;
 }
 .comment-section.has-toc {
-  max-width: 800px;
+  max-width: 860px;
   margin-left: 0;
   margin-right: 0;
 }

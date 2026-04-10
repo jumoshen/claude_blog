@@ -65,9 +65,13 @@ main() {
     log "   配置 Nginx..."
     ssh_cmd "cp $SERVER_DEPLOY_PATH/deploy/nginx.conf $SERVER_DEPLOY_PATH/nginx.conf"
 
-    # Step 3: 登录 GitHub Container Registry
-    log_step "3. 登录 GitHub Container Registry..."
-    ssh_cmd "echo ${GITHUB_TOKEN} | docker login ${GHCR_REGISTRY} -u ${GHCR_OWNER} --password-stdin"
+    # Step 3: 登录 GitHub Container Registry (如果需要)
+    if [ -n "${GITHUB_TOKEN}" ]; then
+        log_step "3. 登录 GitHub Container Registry..."
+        ssh_cmd "echo ${GITHUB_TOKEN} | docker login ${GHCR_REGISTRY} -u ${GHCR_OWNER} --password-stdin" || true
+    else
+        log_step "3. 跳过 GitHub 登录 (无 Token)"
+    fi
 
     # Step 4: 拉取 GitHub 构建的镜像
     log_step "4. 拉取镜像..."

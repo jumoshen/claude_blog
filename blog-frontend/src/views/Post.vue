@@ -109,9 +109,14 @@
 
     <!-- 评论区域 -->
     <div class="comment-section" :class="{ 'has-toc': toc.length > 0 }">
-      <h3 class="comment-title">评论</h3>
+      <div class="comment-header" @click="showComments = !showComments">
+        <h3 class="comment-title">评论 {{ comments.length > 0 ? '(' + comments.length + ')' : '' }}</h3>
+        <span class="comment-toggle">{{ showComments ? '收起' : '展开' }}</span>
+      </div>
 
-      <!-- 评论输入框 -->
+      <transition name="slide">
+        <div v-if="showComments">
+          <!-- 评论输入框 -->
       <div class="comment-form">
         <div class="form-row">
           <input
@@ -161,6 +166,8 @@
       <div v-else class="no-comments">
         暂无评论，来抢沙发吧~
       </div>
+        </div>
+      </transition>
     </div>
   </div>
 </template>
@@ -188,6 +195,7 @@ const comments = ref([])
 const submitting = ref(false)
 const showSharePoster = ref(false)
 const showDonation = ref(false)
+const showComments = ref(false)
 const navigation = ref(null)
 const toc = ref([])
 const relatedPosts = ref([])
@@ -615,6 +623,10 @@ const formatCommentTime = (date) => {
   max-width: 860px;
   margin: 30px auto 0;
   width: 100%;
+  background: var(--card-bg);
+  padding: 20px;
+  border-radius: 8px;
+  box-shadow: 0 4px 20px var(--shadow);
 }
 .comment-section.has-toc {
   max-width: 860px;
@@ -622,19 +634,45 @@ const formatCommentTime = (date) => {
   margin-right: 0;
 }
 
-/* 评论区域 */
-.comment-section {
-  margin-top: 30px;
-  background: var(--card-bg);
-  padding: 20px;
-  border-radius: 8px;
-  box-shadow: 0 4px 20px var(--shadow);
+.comment-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  cursor: pointer;
+  user-select: none;
 }
-
 .comment-title {
-  margin: 0 0 20px;
+  margin: 0;
   font-size: 18px;
   color: var(--text-h);
+}
+.comment-toggle {
+  font-size: 13px;
+  color: var(--accent);
+  padding: 4px 12px;
+  background: var(--accent-bg);
+  border-radius: 12px;
+}
+.comment-toggle:hover {
+  background: var(--accent);
+  color: #fff;
+}
+
+/* 折叠动画 */
+.slide-enter-active,
+.slide-leave-active {
+  transition: all 0.3s ease;
+  overflow: hidden;
+}
+.slide-enter-from,
+.slide-leave-to {
+  opacity: 0;
+  max-height: 0;
+}
+.slide-enter-to,
+.slide-leave-from {
+  opacity: 1;
+  max-height: 1000px;
 }
 
 .comment-form {

@@ -48,7 +48,7 @@ main() {
     ssh_cmd "cd $SERVER_DEPLOY_PATH && git fetch origin && git reset --hard origin/main"
     # B端仓库是独立的，需要单独拉取并检查remote是否正确
     log "   检查 B端仓库..."
-    ssh_cmd "cd $SERVER_DEPLOY_PATH/claude-blog-admin && git remote set-url origin git@github.com:jumoshen/claude-blog-admin.git 2>/dev/null || true && git pull origin main"
+    ssh_cmd "cd $SERVER_DEPLOY_PATH/claude-blog-admin && git remote set-url origin git@github.com:jumoshen/claude-blog-admin.git 2>/dev/null || true && git fetch origin && git reset --hard origin/main"
 
     # Step 2: 复制配置文件 (从 deploy 目录)
     log_step "2. 配置服务..."

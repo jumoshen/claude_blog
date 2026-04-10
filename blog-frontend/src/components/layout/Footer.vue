@@ -34,8 +34,8 @@ onMounted(async () => {
 
 <style scoped>
 .footer {
-  background: #fff;
-  border-top: 1px solid #eee;
+  background: var(--card-bg);
+  border-top: 1px solid var(--border);
   padding: 20px 0;
   margin-top: 40px;
 }
@@ -46,7 +46,7 @@ onMounted(async () => {
   text-align: center;
 }
 .description {
-  color: #666;
+  color: var(--text);
   font-size: 14px;
   margin: 0 0 10px;
 }
@@ -54,12 +54,19 @@ onMounted(async () => {
   margin: 0 0 5px;
 }
 .beian a {
-  color: #999;
+  color: var(--text);
+  opacity: 0.6;
   font-size: 12px;
   text-decoration: none;
+  transition: opacity 0.2s;
+}
+.beian a:hover {
+  opacity: 1;
+  color: var(--accent);
 }
 .author {
-  color: #999;
+  color: var(--text);
+  opacity: 0.6;
   font-size: 12px;
   margin: 0;
 }

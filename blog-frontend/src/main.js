@@ -6,6 +6,8 @@ import * as ElementPlusIconsVue from '@element-plus/icons-vue'
 
 import App from './App.vue'
 import router from './router'
+import { codeCopy } from './directives/codeCopy'
+import { lazyLoad } from './directives/lazyLoad'
 
 const app = createApp(App)
 const pinia = createPinia()
@@ -14,6 +16,10 @@ const pinia = createPinia()
 for (const [key, component] of Object.entries(ElementPlusIconsVue)) {
   app.component(key, component)
 }
+
+// Register global directives
+app.directive('code-copy', codeCopy)
+app.directive('lazy-load', lazyLoad)
 
 app.use(pinia)
 app.use(router)

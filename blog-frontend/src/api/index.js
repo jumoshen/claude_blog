@@ -37,6 +37,7 @@ export default {
   // Posts
   getPosts: (params) => api.get('/posts', { params }),
   getPost: (slug) => api.get(`/posts/${slug}`),
+  getNavigation: (slug) => api.get(`/posts/${slug}/navigation`),
   getArchives: () => api.get('/archives'),
   getAbout: () => api.get('/about'),
   getTags: () => api.get('/tags'),
@@ -51,6 +52,12 @@ export default {
   // Comments
   getComments: (postSlug) => api.get(`/comments/${postSlug}`),
   createComment: (data) => api.post('/comments', data),
+
+  // Like & Favorite
+  likePost: (slug) => api.post(`/posts/${slug}/like`),
+  getPostLikes: (slug) => api.get(`/posts/${slug}/likes`),
+  favoritePost: (slug) => api.post(`/posts/${slug}/favorite`),
+  getMyFavorites: () => api.get('/users/me/favorites'),
 
   // Admin
   refresh: () => api.post('/admin/refresh'),

@@ -10,6 +10,14 @@
           </div>
         </transition>
 
+        <transition name="fade" appear>
+          <div v-if="activeCategory" class="filter-bar">
+            <span class="filter-icon">📂</span>
+            <span>分类: <strong>{{ activeCategory }}</strong></span>
+            <el-button text @click="clearCategory">清除</el-button>
+          </div>
+        </transition>
+
         <transition-group name="list" tag="div" class="posts-wrapper">
           <PostCard
             v-for="(post, index) in posts"
@@ -46,7 +54,7 @@
       </div>
       <aside class="sidebar">
         <TagCloud :tags="tags" @tag-click="handleTagClick" />
-        <CategoryList :categories="categories" />
+        <CategoryList :categories="categories" :activeCategory="activeCategory" />
       </aside>
     </div>
   </div>
@@ -76,6 +84,7 @@ const loadMoreTrigger = ref(null)
 let observer = null
 
 const activeTag = computed(() => route.query.tag || '')
+const activeCategory = computed(() => route.query.category || '')
 
 const fetchPosts = async (reset = false) => {
   if (loading.value) return
@@ -86,7 +95,8 @@ const fetchPosts = async (reset = false) => {
     const res = await api.getPosts({
       page: reset ? 1 : page.value,
       page_size: pageSize.value,
-      tag: activeTag.value || undefined
+      tag: activeTag.value || undefined,
+      category: activeCategory.value || undefined
     })
     if (res.code === 0 && res.data) {
       // 兼容新旧两种 API 格式
@@ -116,9 +126,21 @@ const clearTag = () => {
   router.push({ path: '/', query: {} })
 }
 
-// 监听 tag 变化，重新加载
+const clearCategory = () => {
+  const query = { ...route.query }
+  delete query.category
+  router.push({ path: '/', query })
+}
+
+// 监听 tag 和 category 变化，重新加载
 let initialized = false
 watch(activeTag, () => {
+  if (initialized) {
+    fetchPosts(true)
+  }
+})
+
+watch(activeCategory, () => {
   if (initialized) {
     fetchPosts(true)
   }

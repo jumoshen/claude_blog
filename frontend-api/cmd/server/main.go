@@ -137,7 +137,12 @@ func main() {
 			// Blog user auth routes (C端)
 			auth.POST("/register", userHandler.Register)
 			auth.POST("/login", userHandler.Login)
-			auth.GET("/me", userHandler.Me)
+		}
+
+		// Blog user routes (C端)
+		blogUsers := v1.Group("/blogusers")
+		{
+			blogUsers.GET("/me", middleware.AuthMiddleware(jwtUtil), userHandler.Me)
 		}
 
 		// Comment routes
@@ -173,9 +178,9 @@ func main() {
 			admin.DELETE("/tags/:id", tagHandler.DeleteTag)
 
 			// Post pin/feature routes
-			admin.PUT("/posts/:id/pin", postHandler.SetPostPin)
-			admin.PUT("/posts/:id/feature", postHandler.SetPostFeature)
-			admin.POST("/posts/:id/schedule", postHandler.SchedulePost)
+			admin.PUT("/posts/:slug/pin", postHandler.SetPostPin)
+			admin.PUT("/posts/:slug/feature", postHandler.SetPostFeature)
+			admin.POST("/posts/:slug/schedule", postHandler.SchedulePost)
 			admin.POST("/posts/:slug/password", postHandler.SetPassword)
 
 			// Admin log routes

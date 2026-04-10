@@ -6,9 +6,17 @@ import Decorations from './components/common/Decorations.vue'
 import ReadingProgress from './components/common/ReadingProgress.vue'
 import Toolbox from './components/common/Toolbox.vue'
 import DanmuLayer from './components/common/DanmuLayer.vue'
+import KeyboardNav from './components/common/KeyboardNav.vue'
 import { useStyleStore } from './store/style'
+import { useUserStore } from './store/user'
 
 const styleStore = useStyleStore()
+const userStore = useUserStore()
+
+// DEBUG: Auto login as test user for development
+if (import.meta.env.DEV) {
+  userStore.debugAutoLogin()
+}
 
 // Danmu state - shared across app
 const danmuLayer = ref(null)
@@ -56,6 +64,7 @@ onMounted(() => {
     <Decorations />
     <ReadingProgress />
     <Toolbox @danmu-settings-change="handleDanmuSettingsChange" />
+    <KeyboardNav />
     <DanmuLayer
       ref="danmuLayer"
       :visible="danmuSettings.enabled"
@@ -65,7 +74,11 @@ onMounted(() => {
     />
     <Header />
     <main class="main">
-      <router-view :key="$route.fullPath" />
+      <router-view v-slot="{ Component }">
+        <transition name="router-view" mode="out-in">
+          <component :is="Component" :key="$route.fullPath" />
+        </transition>
+      </router-view>
     </main>
     <Footer />
   </div>
@@ -94,4 +107,36 @@ h1, h2, h3, h4, h5, h6 {
   letter-spacing: 1px;
 }
 .main { min-height: calc(100vh - 60px); position: relative; z-index: 1; }
+
+/* Page transitions */
+.page-transitioning .main {
+  animation: pageTransition 0.3s ease-out;
+}
+
+@keyframes pageTransition {
+  0% {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Route view transitions */
+.router-view-enter-active,
+.router-view-leave-active {
+  transition: opacity 0.25s ease, transform 0.25s ease;
+}
+
+.router-view-enter-from {
+  opacity: 0;
+  transform: translateY(15px);
+}
+
+.router-view-leave-to {
+  opacity: 0;
+  transform: translateY(-10px);
+}
 </style>

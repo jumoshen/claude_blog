@@ -5,12 +5,49 @@
       <div class="meta">
         <span>{{ formatDate(post.date) }}</span>
         <span>{{ post.views }} views</span>
+        <div class="post-actions">
+          <button class="action-btn like-btn" :class="{ active: isLiked }" @click="toggleLike" :title="isLiked ? '取消点赞' : '点赞'">
+            <svg width="18" height="18" viewBox="0 0 24 24" :fill="isLiked ? 'currentColor' : 'none'" stroke="currentColor" stroke-width="2">
+              <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+            </svg>
+            <span class="like-count">{{ likeCount }}</span>
+          </button>
+          <button class="action-btn favorite-btn" :class="{ active: isFavorited }" @click="toggleFavorite" :title="isFavorited ? '取消收藏' : '收藏'">
+            <svg width="18" height="18" viewBox="0 0 24 24" :fill="isFavorited ? 'currentColor' : 'none'" stroke="currentColor" stroke-width="2">
+              <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+            </svg>
+          </button>
+          <button class="action-btn share-btn" @click="showSharePoster = true" title="分享海报">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M4 12v8a2 2 0 002 2h12a2 2 0 002-2v-8M16 6l-4-4-4 4M12 2v13"/>
+            </svg>
+          </button>
+          <button class="action-btn donate-btn" @click="showDonation = true" title="打赏作者">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+            </svg>
+          </button>
+        </div>
       </div>
       <div class="tags">
         <el-tag v-for="tag in post.tags" :key="tag" size="small">{{ tag }}</el-tag>
       </div>
-      <div class="content" v-html="renderedContent"></div>
+      <div class="content" v-html="renderedContent" v-code-copy></div>
     </article>
+
+    <!-- Share Poster Modal -->
+    <SharePoster
+      :visible="showSharePoster"
+      :post="post"
+      @close="showSharePoster = false"
+    />
+
+    <!-- Donation Modal -->
+    <DonationModal
+      :visible="showDonation"
+      :post="post"
+      @close="showDonation = false"
+    />
 
     <!-- 评论区域 -->
     <div class="comment-section">
@@ -72,11 +109,14 @@
 
 <script setup>
 import { ref, watch, onMounted, onUnmounted, computed, inject } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { marked } from 'marked'
 import api from '../api'
+import SharePoster from '../components/post/SharePoster.vue'
+import DonationModal from '../components/post/DonationModal.vue'
 
 const route = useRoute()
+const router = useRouter()
 
 // Get danmu functions from App.vue via inject
 const danmuSettings = inject('danmuSettings')
@@ -88,6 +128,12 @@ const post = ref(null)
 const content = ref('')
 const comments = ref([])
 const submitting = ref(false)
+const showSharePoster = ref(false)
+const showDonation = ref(false)
+const navigation = ref(null)
+const isLiked = ref(false)
+const isFavorited = ref(false)
+const likeCount = ref(0)
 
 // Comment form
 const commentForm = ref({
@@ -175,6 +221,24 @@ const fetchPost = async () => {
     post.value = res.data.post
     content.value = res.data.content
   }
+  // Fetch navigation
+  try {
+    const navRes = await api.getNavigation(route.params.slug)
+    if (navRes.code === 0) {
+      navigation.value = navRes.data
+    }
+  } catch (e) {
+    console.error('Failed to fetch navigation:', e)
+  }
+  // Fetch like count
+  try {
+    const likeRes = await api.getPostLikes(route.params.slug)
+    if (likeRes.code === 0) {
+      likeCount.value = likeRes.data.count
+    }
+  } catch (e) {
+    console.error('Failed to fetch like count:', e)
+  }
 }
 
 const fetchComments = async (postSlug) => {
@@ -237,6 +301,31 @@ const canSubmit = computed(() => {
          commentForm.value.content.trim().length > 0
 })
 
+const toggleLike = async () => {
+  try {
+    const res = await api.likePost(route.params.slug)
+    if (res.code === 0) {
+      isLiked.value = res.data.liked
+      likeCount.value = res.data.count
+    }
+  } catch (e) {
+    console.error('Failed to toggle like:', e)
+    alert('请先登录')
+  }
+}
+
+const toggleFavorite = async () => {
+  try {
+    const res = await api.favoritePost(route.params.slug)
+    if (res.code === 0) {
+      isFavorited.value = res.data.favorited
+    }
+  } catch (e) {
+    console.error('Failed to toggle favorite:', e)
+    alert('请先登录')
+  }
+}
+
 onMounted(async () => {
   await fetchPost()
   const slug = route.params.slug
@@ -244,10 +333,13 @@ onMounted(async () => {
     await fetchComments(slug)
     connectWebSocket(slug)
   }
+  // Listen for keyboard navigation events
+  window.addEventListener('keyboard-nav', handleKeyboardNav)
 })
 
 onUnmounted(() => {
   disconnectWebSocket()
+  window.removeEventListener('keyboard-nav', handleKeyboardNav)
 })
 
 watch(() => route.params.slug, async (newSlug) => {
@@ -260,6 +352,15 @@ watch(() => route.params.slug, async (newSlug) => {
     connectWebSocket(newSlug)
   }
 })
+
+const handleKeyboardNav = (e) => {
+  const { direction } = e.detail
+  if (direction === 'prev' && navigation.value?.prev) {
+    router.push(`/post/${navigation.value.prev.slug}`)
+  } else if (direction === 'next' && navigation.value?.next) {
+    router.push(`/post/${navigation.value.next.slug}`)
+  }
+}
 
 const renderedContent = computed(() => {
   if (!content.value) return ''
@@ -288,30 +389,87 @@ const formatCommentTime = (date) => {
 
 <style scoped>
 .post-view { max-width: 800px; margin: 0 auto; padding: 40px 20px; }
-.post-content { background: #fff; padding: 30px; border-radius: 8px; }
-.title { margin: 0 0 15px; }
-.meta { color: #999; font-size: 14px; margin-bottom: 15px; }
-.meta span { margin-right: 15px; }
+.post-content { background: var(--card-bg); padding: 30px; border-radius: 8px; box-shadow: 0 4px 20px var(--shadow); }
+.title { margin: 0 0 15px; color: var(--text-h); }
+.meta { color: var(--text); opacity: 0.7; font-size: 14px; margin-bottom: 15px; display: flex; align-items: center; gap: 15px; }
+.meta span { margin-right: 0; }
+.post-actions { display: flex; gap: 8px; margin-left: auto; }
+.action-btn {
+  width: 44px;
+  height: 44px;
+  border: 2px solid var(--border);
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  background: var(--card-bg);
+  position: relative;
+  overflow: hidden;
+}
+.action-btn::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, transparent 0%, rgba(255,255,255,0.1) 50%, transparent 100%);
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+.action-btn:hover::before {
+  opacity: 1;
+}
+.action-btn:hover {
+  transform: translateY(-4px) scale(1.1);
+  box-shadow: 0 12px 35px var(--shadow);
+}
+.action-btn:active {
+  transform: translateY(-2px) scale(1.05);
+}
+.share-btn { color: var(--accent); border-color: var(--accent-border); }
+.share-btn:hover { background: var(--accent); color: #fff; border-color: var(--accent); }
+.donate-btn { color: #ff6b9d; border-color: rgba(255, 107, 157, 0.3); }
+.donate-btn:hover { background: linear-gradient(135deg, #ff6b9d, #ffa8c5); color: #fff; border-color: #ff6b9d; box-shadow: 0 12px 35px rgba(255, 107, 157, 0.4); }
+.like-btn { color: #ff6b6b; border-color: rgba(255, 107, 107, 0.3); display: flex; align-items: center; gap: 4px; }
+.like-btn:hover { background: linear-gradient(135deg, #ff6b6b, #ff8e8e); color: #fff; border-color: #ff6b6b; box-shadow: 0 12px 35px rgba(255, 107, 107, 0.4); }
+.like-btn.active { background: #ff6b6b; color: #fff; border-color: #ff6b6b; animation: likePulse 0.4s ease; }
+@keyframes likePulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.3); }
+  100% { transform: scale(1); }
+}
+.like-count { font-size: 12px; font-weight: 600; }
+.favorite-btn { color: #ffd700; border-color: rgba(255, 215, 0, 0.3); }
+.favorite-btn:hover { background: linear-gradient(135deg, #ffd700, #ffed4a); color: #fff; border-color: #ffd700; box-shadow: 0 12px 35px rgba(255, 215, 0, 0.4); }
+.favorite-btn.active { background: #ffd700; color: #fff; border-color: #ffd700; animation: starPulse 0.5s ease; }
+@keyframes starPulse {
+  0% { transform: scale(1) rotate(0deg); }
+  50% { transform: scale(1.3) rotate(10deg); }
+  100% { transform: scale(1) rotate(0deg); }
+}
 .tags { margin-bottom: 20px; }
-.tags .el-tag { margin-right: 5px; }
-.content { line-height: 1.8; color: #333; }
-.content :deep(h1), .content :deep(h2), .content :deep(h3) { margin-top: 30px; margin-bottom: 15px; }
-.content :deep(pre) { background: #f6f8fa; padding: 15px; border-radius: 4px; overflow-x: auto; }
-.content :deep(code) { background: #f6f8fa; padding: 2px 5px; border-radius: 3px; font-family: monospace; }
+.tags .el-tag { margin-right: 5px; background: var(--accent-bg); color: var(--accent); border-color: var(--accent-border); }
+.content { line-height: 1.8; color: var(--text); }
+.content :deep(h1), .content :deep(h2), .content :deep(h3) { margin-top: 30px; margin-bottom: 15px; color: var(--text-h); }
+.content :deep(pre) { background: var(--code-bg); padding: 15px; border-radius: 4px; overflow-x: auto; }
+.content :deep(code) { background: var(--code-bg); padding: 2px 5px; border-radius: 3px; font-family: monospace; }
 .content :deep(img) { max-width: 100%; }
+.content :deep(a) { color: var(--accent); }
+.content :deep(blockquote) { border-left: 4px solid var(--accent); margin: 20px 0; padding: 10px 20px; background: var(--accent-bg); border-radius: 0 8px 8px 0; }
 
 /* 评论区域 */
 .comment-section {
   margin-top: 30px;
-  background: #fff;
+  background: var(--card-bg);
   padding: 20px;
   border-radius: 8px;
+  box-shadow: 0 4px 20px var(--shadow);
 }
 
 .comment-title {
   margin: 0 0 20px;
   font-size: 18px;
-  color: #333;
+  color: var(--text-h);
 }
 
 .comment-form {
@@ -325,31 +483,35 @@ const formatCommentTime = (date) => {
 .nickname-input {
   width: 100%;
   padding: 10px 12px;
-  border: 1px solid #ddd;
+  border: 1px solid var(--border);
   border-radius: 6px;
   font-size: 14px;
   box-sizing: border-box;
+  background: var(--bg);
+  color: var(--text);
 }
 
 .nickname-input:focus {
   outline: none;
-  border-color: var(--accent, #646cff);
+  border-color: var(--accent);
 }
 
 .comment-input {
   width: 100%;
   padding: 10px 12px;
-  border: 1px solid #ddd;
+  border: 1px solid var(--border);
   border-radius: 6px;
   font-size: 14px;
   resize: vertical;
   font-family: inherit;
   box-sizing: border-box;
+  background: var(--bg);
+  color: var(--text);
 }
 
 .comment-input:focus {
   outline: none;
-  border-color: var(--accent, #646cff);
+  border-color: var(--accent);
 }
 
 .form-actions {

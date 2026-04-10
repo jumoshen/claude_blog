@@ -86,18 +86,30 @@ type PostTag struct {
 	CreatedAt time.Time `gorm:"autoCreateTime"`
 }
 
-// BlogUser 博客用户表（C端用户）
+// PostCategory 文章分类关联表
+type PostCategory struct {
+	ID         uint      `gorm:"primaryKey"`
+	PostID     uint      `gorm:"not null;comment:文章ID;index:idx_pc_post"`
+	CategoryID uint      `gorm:"not null;comment:分类ID;index:idx_pc_cat"`
+	CreatedAt  time.Time `gorm:"autoCreateTime"`
+}
+
+// BlogUser 博客用户表（C端用户）- 使用users表
 type BlogUser struct {
 	ID           uint           `gorm:"primaryKey"`
-	Username     string         `gorm:"size:50;not null;uniqueIndex;comment:用户名"`
-	Email        string         `gorm:"size:100;not null;uniqueIndex;comment:邮箱"`
-	PasswordHash string         `gorm:"size:255;not null;comment:密码哈希"`
-	Nickname     string         `gorm:"size:50;default:'';comment:昵称"`
-	AvatarURL    string         `gorm:"size:500;default:'';comment:头像"`
-	Status       int            `gorm:"default:1;comment:状态 1=正常 0=禁用"`
+	Username     string         `gorm:"column:username;size:50;not null;uniqueIndex;comment:用户名"`
+	Email        string         `gorm:"column:email;size:100;not null;uniqueIndex;comment:邮箱"`
+	PasswordHash string         `gorm:"column:password;size:255;not null;comment:密码哈希"`
+	Nickname     string         `gorm:"column:nickname;size:100;default:'';comment:昵称"`
+	AvatarURL    string         `gorm:"column:avatar;size:500;default:'';comment:头像"`
+	Status       int            `gorm:"column:status;default:1;comment:状态 1=正常 0=禁用"`
 	CreatedAt    time.Time
 	UpdatedAt    time.Time
 	DeletedAt    gorm.DeletedAt `gorm:"index"`
+}
+
+func (BlogUser) TableName() string {
+	return "users"
 }
 
 // PostLike 文章点赞表

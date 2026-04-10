@@ -36,6 +36,26 @@ const routes = [
 const router = createRouter({
   history: createWebHistory(),
   routes,
+  scrollBehavior(to, from, savedPosition) {
+    if (savedPosition) {
+      return savedPosition
+    } else {
+      return { top: 0, behavior: 'smooth' }
+    }
+  }
+})
+
+// Page transition class management
+router.beforeEach((to, from) => {
+  // Add transitioning class
+  document.body.classList.add('page-transitioning')
+})
+
+router.afterEach(() => {
+  // Remove transitioning class after transition
+  setTimeout(() => {
+    document.body.classList.remove('page-transitioning')
+  }, 300)
 })
 
 export default router

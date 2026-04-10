@@ -8,6 +8,7 @@ import (
 	"github.com/gin-gonic/gin"
 
 	"markdown-blog/internal/logger"
+	"markdown-blog/internal/middleware"
 	"markdown-blog/internal/pkg/response"
 	"markdown-blog/internal/service"
 )
@@ -31,12 +32,14 @@ func NewPostHandler(svc *service.Service, log *logger.Logger) *PostHandler {
 // @Tags posts
 // @Produce json
 // @Param tag query string false "Filter by tag"
+// @Param category query string false "Filter by category"
 // @Param page query int false "Page number" default(1)
 // @Param page_size query int false "Page size" default(10)
 // @Success 200 {object} response.Response{data=[]PostInfo}
 // @Router /api/v1/posts [get]
 func (h *PostHandler) ListPosts(c *gin.Context) {
 	filterTag := c.Query("tag")
+	filterCategory := c.Query("category")
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
 	pageSize, _ := strconv.Atoi(c.DefaultQuery("page_size", "10"))
 
@@ -47,14 +50,14 @@ func (h *PostHandler) ListPosts(c *gin.Context) {
 		pageSize = 10
 	}
 
-	posts, total, err := h.svc.ListPostsPaginated(filterTag, page, pageSize)
+	posts, total, err := h.svc.ListPostsPaginated(filterTag, filterCategory, page, pageSize)
 	if err != nil {
 		h.log.Error("Failed to list posts: %v", err)
 		response.InternalError(c, "Failed to load posts")
 		return
 	}
 
-	h.log.Info("ListPosts: page=%d, page_size=%d, total=%d, tag=%s", page, pageSize, total, filterTag)
+	h.log.Info("ListPosts: page=%d, page_size=%d, total=%d, tag=%s, category=%s", page, pageSize, total, filterTag, filterCategory)
 	response.Success(c, gin.H{
 		"list":      posts,
 		"total":     total,
@@ -439,13 +442,13 @@ func (h *PostHandler) LikePost(c *gin.Context) {
 	slug := c.Param("slug")
 
 	// 获取登录用户ID
-	userID, exists := c.Get("user_id")
-	if !exists {
+	claims := middleware.GetUserClaims(c)
+	if claims == nil {
 		response.Unauthorized(c, "Please login first")
 		return
 	}
 
-	liked, count, err := h.svc.LikePost(slug, userID.(uint))
+	liked, count, err := h.svc.LikePost(slug, uint(claims.UserID))
 	if err != nil {
 		h.log.Error("Failed to like post: %v", err)
 		response.InternalError(c, "Failed to like post")
@@ -490,13 +493,13 @@ func (h *PostHandler) GetPostLikes(c *gin.Context) {
 func (h *PostHandler) FavoritePost(c *gin.Context) {
 	slug := c.Param("slug")
 
-	userID, exists := c.Get("user_id")
-	if !exists {
+	claims := middleware.GetUserClaims(c)
+	if claims == nil {
 		response.Unauthorized(c, "Please login first")
 		return
 	}
 
-	favorited, err := h.svc.FavoritePost(slug, userID.(uint))
+	favorited, err := h.svc.FavoritePost(slug, uint(claims.UserID))
 	if err != nil {
 		h.log.Error("Failed to favorite post: %v", err)
 		response.InternalError(c, "Failed to favorite post")
@@ -515,13 +518,13 @@ func (h *PostHandler) FavoritePost(c *gin.Context) {
 // @Success 200 {object} response.Response
 // @Router /api/v1/users/me/favorites [get]
 func (h *PostHandler) ListMyFavorites(c *gin.Context) {
-	userID, exists := c.Get("user_id")
-	if !exists {
+	claims := middleware.GetUserClaims(c)
+	if claims == nil {
 		response.Unauthorized(c, "Please login first")
 		return
 	}
 
-	posts, err := h.svc.ListMyFavorites(userID.(uint))
+	posts, err := h.svc.ListMyFavorites(uint(claims.UserID))
 	if err != nil {
 		h.log.Error("Failed to list favorites: %v", err)
 		response.InternalError(c, "Failed to load favorites")

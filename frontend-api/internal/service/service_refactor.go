@@ -57,6 +57,39 @@ func NewWithRedis(cfg *config.Config, redisClient *redis.Client) (*Service, erro
 	return New(cfg, repo), nil
 }
 
+// toPostInfoList converts posts to PostInfo list using normalized tables for tags/categories
+func (s *Service) toPostInfoList(posts []model.Post) []PostInfo {
+	if len(posts) == 0 {
+		return []PostInfo{}
+	}
+
+	postIDs := make([]uint, len(posts))
+	for i, p := range posts {
+		postIDs[i] = p.ID
+	}
+
+	tagMap, _ := s.repo.GetPostTags(postIDs)
+	catMap, _ := s.repo.GetPostCategories(postIDs)
+
+	result := make([]PostInfo, 0, len(posts))
+	for _, p := range posts {
+		result = append(result, PostInfo{
+			Slug:        p.Slug,
+			Title:       p.Title,
+			Date:        p.Date,
+			Tags:        tagMap[p.ID],
+			Categories:  catMap[p.ID],
+			Summary:     p.Summary,
+			Views:       p.Views,
+			IsPinned:    p.IsPinned,
+			IsFeatured:  p.IsFeatured,
+			ScheduledAt: p.ScheduledAt,
+			ReadingTime: CalculateReadingTime(p.Content),
+		})
+	}
+	return result
+}
+
 type PostInfo struct {
 	Slug        string     `json:"slug"`
 	Title       string     `json:"title"`
@@ -91,14 +124,28 @@ func (s *Service) ListPosts() ([]PostInfo, error) {
 		return nil, err
 	}
 
+	if len(posts) == 0 {
+		return []PostInfo{}, nil
+	}
+
+	// 获取所有 post IDs
+	postIDs := make([]uint, len(posts))
+	for i, p := range posts {
+		postIDs[i] = p.ID
+	}
+
+	// 从 normalized 表获取 tags 和 categories
+	tagMap, _ := s.repo.GetPostTags(postIDs)
+	catMap, _ := s.repo.GetPostCategories(postIDs)
+
 	result := make([]PostInfo, 0, len(posts))
 	for _, p := range posts {
 		result = append(result, PostInfo{
 			Slug:        p.Slug,
 			Title:       p.Title,
 			Date:        p.Date,
-			Tags:        strings.Split(p.Tags, ","),
-			Categories:  strings.Split(p.Categories, ","),
+			Tags:        tagMap[p.ID],
+			Categories:  catMap[p.ID],
 			Summary:     p.Summary,
 			Views:       p.Views,
 			IsPinned:    p.IsPinned,
@@ -110,11 +157,25 @@ func (s *Service) ListPosts() ([]PostInfo, error) {
 }
 
 // ListPostsPaginated 分页获取已发布文章
-func (s *Service) ListPostsPaginated(tag string, page, pageSize int) ([]PostInfo, int64, error) {
-	posts, total, err := s.repo.ListPostsPaginated(tag, page, pageSize)
+func (s *Service) ListPostsPaginated(tag string, category string, page, pageSize int) ([]PostInfo, int64, error) {
+	posts, total, err := s.repo.ListPostsPaginated(tag, category, page, pageSize)
 	if err != nil {
 		return nil, 0, err
 	}
+
+	if len(posts) == 0 {
+		return []PostInfo{}, total, nil
+	}
+
+	// 获取所有 post IDs
+	postIDs := make([]uint, len(posts))
+	for i, p := range posts {
+		postIDs[i] = p.ID
+	}
+
+	// 从 normalized 表获取 tags 和 categories
+	tagMap, _ := s.repo.GetPostTags(postIDs)
+	catMap, _ := s.repo.GetPostCategories(postIDs)
 
 	result := make([]PostInfo, 0, len(posts))
 	for _, p := range posts {
@@ -122,8 +183,8 @@ func (s *Service) ListPostsPaginated(tag string, page, pageSize int) ([]PostInfo
 			Slug:        p.Slug,
 			Title:       p.Title,
 			Date:        p.Date,
-			Tags:        strings.Split(p.Tags, ","),
-			Categories:  strings.Split(p.Categories, ","),
+			Tags:        tagMap[p.ID],
+			Categories:  catMap[p.ID],
 			Summary:     p.Summary,
 			Views:       p.Views,
 			IsPinned:    p.IsPinned,
@@ -145,12 +206,16 @@ func (s *Service) GetPost(slug string) (*PostInfo, string, error) {
 	// Increment views
 	s.repo.GetDB().Model(post).Update("views", gorm.Expr("views + 1"))
 
+	// 从 normalized 表获取 tags 和 categories
+	tagMap, _ := s.repo.GetPostTags([]uint{post.ID})
+	catMap, _ := s.repo.GetPostCategories([]uint{post.ID})
+
 	info := &PostInfo{
 		Slug:        post.Slug,
 		Title:       post.Title,
 		Date:        post.Date,
-		Tags:        strings.Split(post.Tags, ","),
-		Categories:  strings.Split(post.Categories, ","),
+		Tags:        tagMap[post.ID],
+		Categories:  catMap[post.ID],
 		Summary:     post.Summary,
 		Views:       post.Views + 1,
 		IsPinned:    post.IsPinned,
@@ -383,7 +448,7 @@ func (s *Service) ServeMarkdownFile(filename string, w io.Writer) error {
 }
 
 // GetAllTags returns all tags with post count
-func (s *Service) GetAllTags() (map[string]int, error) {
+func (s *Service) GetAllTags() ([]repository.TagWithCount, error) {
 	return s.repo.GetAllTags()
 }
 
@@ -837,22 +902,7 @@ func (s *Service) SearchPosts(keyword string, page, pageSize int) ([]PostInfo, i
 		return nil, 0, err
 	}
 
-	result := make([]PostInfo, 0, len(posts))
-	for _, p := range posts {
-		result = append(result, PostInfo{
-			Slug:        p.Slug,
-			Title:       p.Title,
-			Date:        p.Date,
-			Tags:        strings.Split(p.Tags, ","),
-			Categories:  strings.Split(p.Categories, ","),
-			Summary:     p.Summary,
-			Views:       p.Views,
-			IsPinned:    p.IsPinned,
-			IsFeatured:  p.IsFeatured,
-			ScheduledAt: p.ScheduledAt,
-		})
-	}
-	return result, total, nil
+	return s.toPostInfoList(posts), total, nil
 }
 
 // ListFeaturedPosts 获取推荐文章
@@ -862,22 +912,7 @@ func (s *Service) ListFeaturedPosts() ([]PostInfo, error) {
 		return nil, err
 	}
 
-	result := make([]PostInfo, 0, len(posts))
-	for _, p := range posts {
-		result = append(result, PostInfo{
-			Slug:        p.Slug,
-			Title:       p.Title,
-			Date:        p.Date,
-			Tags:        strings.Split(p.Tags, ","),
-			Categories:  strings.Split(p.Categories, ","),
-			Summary:     p.Summary,
-			Views:       p.Views,
-			IsPinned:    p.IsPinned,
-			IsFeatured:  p.IsFeatured,
-			ScheduledAt: p.ScheduledAt,
-		})
-	}
-	return result, nil
+	return s.toPostInfoList(posts), nil
 }
 
 // SetPostPin 设置/取消置顶
@@ -906,18 +941,15 @@ func (s *Service) GetPostByID(id uint) (*PostInfo, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &PostInfo{
-		Slug:        post.Slug,
-		Title:       post.Title,
-		Date:        post.Date,
-		Tags:        strings.Split(post.Tags, ","),
-		Categories:  strings.Split(post.Categories, ","),
-		Summary:     post.Summary,
-		Views:       post.Views,
-		IsPinned:    post.IsPinned,
-		IsFeatured:  post.IsFeatured,
-		ScheduledAt: post.ScheduledAt,
-	}, nil
+	if post == nil {
+		return nil, nil
+	}
+
+	infoList := s.toPostInfoList([]model.Post{*post})
+	if len(infoList) == 0 {
+		return nil, nil
+	}
+	return &infoList[0], nil
 }
 
 // TocItem 目录项
@@ -1053,22 +1085,7 @@ func (s *Service) ListPopularPosts(limit int) ([]PostInfo, error) {
 		return nil, err
 	}
 
-	result := make([]PostInfo, 0, len(posts))
-	for _, p := range posts {
-		result = append(result, PostInfo{
-			Slug:        p.Slug,
-			Title:       p.Title,
-			Date:        p.Date,
-			Tags:        strings.Split(p.Tags, ","),
-			Categories:  strings.Split(p.Categories, ","),
-			Summary:     p.Summary,
-			Views:       p.Views,
-			IsPinned:    p.IsPinned,
-			IsFeatured:  p.IsFeatured,
-			ReadingTime: CalculateReadingTime(p.Content),
-		})
-	}
-	return result, nil
+	return s.toPostInfoList(posts), nil
 }
 
 // ListRelatedPosts 获取相关文章
@@ -1083,27 +1100,16 @@ func (s *Service) ListRelatedPosts(slug string, limit int) ([]PostInfo, error) {
 		return nil, err
 	}
 
-	posts, err := s.repo.ListRelatedPosts(slug, currentPost.Tags, limit)
+	// 从 normalized 表获取当前文章的 tags
+	tagMap, _ := s.repo.GetPostTags([]uint{currentPost.ID})
+	currentTags := tagMap[currentPost.ID]
+
+	posts, err := s.repo.ListRelatedPosts(slug, currentTags, limit)
 	if err != nil {
 		return nil, err
 	}
 
-	result := make([]PostInfo, 0, len(posts))
-	for _, p := range posts {
-		result = append(result, PostInfo{
-			Slug:        p.Slug,
-			Title:       p.Title,
-			Date:        p.Date,
-			Tags:        strings.Split(p.Tags, ","),
-			Categories:  strings.Split(p.Categories, ","),
-			Summary:     p.Summary,
-			Views:       p.Views,
-			IsPinned:    p.IsPinned,
-			IsFeatured:  p.IsFeatured,
-			ReadingTime: CalculateReadingTime(p.Content),
-		})
-	}
-	return result, nil
+	return s.toPostInfoList(posts), nil
 }
 
 // BlogUserInfo 博客用户信息
@@ -1298,22 +1304,7 @@ func (s *Service) ListMyFavorites(userID uint) ([]PostInfo, error) {
 		return nil, err
 	}
 
-	result := make([]PostInfo, 0, len(posts))
-	for _, p := range posts {
-		result = append(result, PostInfo{
-			Slug:        p.Slug,
-			Title:       p.Title,
-			Date:        p.Date,
-			Tags:        strings.Split(p.Tags, ","),
-			Categories:  strings.Split(p.Categories, ","),
-			Summary:     p.Summary,
-			Views:       p.Views,
-			IsPinned:    p.IsPinned,
-			IsFeatured:  p.IsFeatured,
-			ReadingTime: CalculateReadingTime(p.Content),
-		})
-	}
-	return result, nil
+	return s.toPostInfoList(posts), nil
 }
 
 // HasPassword 检查文章是否有密码保护

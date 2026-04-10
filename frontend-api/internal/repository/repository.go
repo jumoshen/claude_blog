@@ -3,7 +3,6 @@ package repository
 import (
 	"context"
 	"fmt"
-	"strings"
 	"time"
 
 	"github.com/go-redis/redis/v8"
@@ -29,7 +28,7 @@ func New(cfg *config.Config) (*Repository, error) {
 	}
 
 	// Auto migrate (only for basic tables, use migrations/ for schema changes)
-	db.AutoMigrate(&model.Post{}, &model.User{}, &model.Visit{})
+	// db.AutoMigrate(&model.Post{}, &model.User{}, &model.Visit{})
 
 	// Connect to Redis
 	rdb := redis.NewClient(&redis.Options{
@@ -68,14 +67,44 @@ func (r *Repository) ListPosts() ([]model.Post, error) {
 }
 
 // ListPostsPaginated 分页获取已发布文章
-func (r *Repository) ListPostsPaginated(tag string, page, pageSize int) ([]model.Post, int64, error) {
+func (r *Repository) ListPostsPaginated(tag string, category string, page, pageSize int) ([]model.Post, int64, error) {
 	var posts []model.Post
 	var total int64
 
 	query := r.db.Model(&model.Post{}).Where("status = 1")
 
+	// 如果按标签筛选，使用新的 normalized 表
 	if tag != "" {
-		query = query.Where("tags LIKE ?", "%"+tag+"%")
+		var tagPostIDs []uint
+		if err := r.db.Table("post_tags").
+			Select("post_tags.post_id").
+			Joins("JOIN tags ON post_tags.tag_id = tags.id").
+			Joins("JOIN posts ON post_tags.post_id = posts.id").
+			Where("tags.slug = ? AND posts.status = 1", tag).
+			Find(&tagPostIDs).Error; err != nil {
+			return nil, 0, err
+		}
+		if len(tagPostIDs) == 0 {
+			return posts, 0, nil
+		}
+		query = query.Where("id IN ?", tagPostIDs)
+	}
+
+	// 如果按分类筛选
+	if category != "" {
+		var catPostIDs []uint
+		if err := r.db.Table("post_categories").
+			Select("post_categories.post_id").
+			Joins("JOIN categories ON post_categories.category_id = categories.id").
+			Joins("JOIN posts ON post_categories.post_id = posts.id").
+			Where("categories.slug = ? AND posts.status = 1", category).
+			Find(&catPostIDs).Error; err != nil {
+			return nil, 0, err
+		}
+		if len(catPostIDs) == 0 {
+			return posts, 0, nil
+		}
+		query = query.Where("id IN ?", catPostIDs)
 	}
 
 	// Count total
@@ -155,44 +184,99 @@ func (r *Repository) IsBlacklisted(ctx context.Context, jti string) bool {
 	return result > 0
 }
 
-// GetAllTags 获取所有标签及其文章数量（仅已发布文章，使用 SQL 统计）
-func (r *Repository) GetAllTags() (map[string]int, error) {
-	var posts []model.Post
-	if err := r.db.Select("tags").Where("status = 1").Find(&posts).Error; err != nil {
-		return nil, err
-	}
-
-	tagCount := make(map[string]int)
-	for _, p := range posts {
-		tags := strings.Split(p.Tags, ",")
-		for _, tag := range tags {
-			tag = strings.TrimSpace(tag)
-			if tag != "" {
-				tagCount[tag]++
-			}
-		}
-	}
-	return tagCount, nil
+// TagWithCount 标签及其数量
+type TagWithCount struct {
+	Slug  string `json:"slug"`
+	Count int    `json:"count"`
+	Color string `json:"color"`
 }
 
-// GetAllCategories 获取所有分类及其文章数量（仅已发布文章）
+// GetAllTags 获取所有标签及其文章数量（从 normalized 表查询）
+func (r *Repository) GetAllTags() ([]TagWithCount, error) {
+	var results []TagWithCount
+	if err := r.db.Table("tags").
+		Select("tags.slug, COUNT(post_tags.post_id) as count, tags.color").
+		Joins("LEFT JOIN post_tags ON tags.id = post_tags.tag_id").
+		Joins("LEFT JOIN posts ON post_tags.post_id = posts.id AND posts.status = 1").
+		Group("tags.id").
+		Find(&results).Error; err != nil {
+		return nil, err
+	}
+	return results, nil
+}
+
+// GetAllCategories 获取所有分类及其文章数量（从 normalized 表查询）
 func (r *Repository) GetAllCategories() (map[string]int, error) {
-	var posts []model.Post
-	if err := r.db.Select("categories").Where("status = 1").Find(&posts).Error; err != nil {
+	var results []struct {
+		Slug string
+		Count int
+	}
+	if err := r.db.Table("categories").
+		Select("categories.slug, COUNT(post_categories.post_id) as count").
+		Joins("LEFT JOIN post_categories ON categories.id = post_categories.category_id").
+		Joins("LEFT JOIN posts ON post_categories.post_id = posts.id AND posts.status = 1").
+		Group("categories.id").
+		Find(&results).Error; err != nil {
 		return nil, err
 	}
 
 	catCount := make(map[string]int)
-	for _, p := range posts {
-		cats := strings.Split(p.Categories, ",")
-		for _, cat := range cats {
-			cat = strings.TrimSpace(cat)
-			if cat != "" {
-				catCount[cat]++
-			}
+	for _, c := range results {
+		if c.Slug != "" {
+			catCount[c.Slug] = c.Count
 		}
 	}
 	return catCount, nil
+}
+
+// GetPostTags 获取指定文章的标签slug列表
+func (r *Repository) GetPostTags(postIDs []uint) (map[uint][]string, error) {
+	if len(postIDs) == 0 {
+		return make(map[uint][]string), nil
+	}
+
+	var results []struct {
+		PostID uint
+		Slug   string
+	}
+	if err := r.db.Table("post_tags").
+		Select("post_tags.post_id, tags.slug").
+		Joins("JOIN tags ON post_tags.tag_id = tags.id").
+		Where("post_tags.post_id IN ?", postIDs).
+		Find(&results).Error; err != nil {
+		return nil, err
+	}
+
+	tagMap := make(map[uint][]string)
+	for _, r := range results {
+		tagMap[r.PostID] = append(tagMap[r.PostID], r.Slug)
+	}
+	return tagMap, nil
+}
+
+// GetPostCategories 获取指定文章的分类slug列表
+func (r *Repository) GetPostCategories(postIDs []uint) (map[uint][]string, error) {
+	if len(postIDs) == 0 {
+		return make(map[uint][]string), nil
+	}
+
+	var results []struct {
+		PostID uint
+		Slug   string
+	}
+	if err := r.db.Table("post_categories").
+		Select("post_categories.post_id, categories.slug").
+		Joins("JOIN categories ON post_categories.category_id = categories.id").
+		Where("post_categories.post_id IN ?", postIDs).
+		Find(&results).Error; err != nil {
+		return nil, err
+	}
+
+	catMap := make(map[uint][]string)
+	for _, r := range results {
+		catMap[r.PostID] = append(catMap[r.PostID], r.Slug)
+	}
+	return catMap, nil
 }
 
 // CreateVisit 创建访问记录
@@ -573,30 +657,30 @@ func (r *Repository) ListPopularPosts(limit int) ([]model.Post, error) {
 }
 
 // ListRelatedPosts 获取相关文章（共享标签）
-func (r *Repository) ListRelatedPosts(currentSlug string, tags string, limit int) ([]model.Post, error) {
+func (r *Repository) ListRelatedPosts(currentSlug string, tags []string, limit int) ([]model.Post, error) {
 	var posts []model.Post
 
 	// 如果没有标签，返回空
-	if tags == "" {
+	if len(tags) == 0 {
 		return posts, nil
 	}
 
-	// 解析标签
-	tagList := strings.Split(tags, ",")
-	if len(tagList) == 0 {
+	// 从 post_tags 表查询共享标签的文章
+	var relatedPostIDs []uint
+	if err := r.db.Table("post_tags").
+		Select("DISTINCT post_id").
+		Where("post_id IN (SELECT post_id FROM post_tags WHERE tag_id IN (SELECT id FROM tags WHERE slug IN ?))", tags).
+		Where("post_id NOT IN (SELECT id FROM posts WHERE slug = ?)", currentSlug).
+		Limit(limit).
+		Find(&relatedPostIDs).Error; err != nil {
+		return nil, err
+	}
+
+	if len(relatedPostIDs) == 0 {
 		return posts, nil
 	}
 
-	// 构建查询条件：共享任意标签
-	query := r.db.Where("status = 1 AND slug != ?", currentSlug)
-	for _, tag := range tagList {
-		tag = strings.TrimSpace(tag)
-		if tag != "" {
-			query = query.Or("tags LIKE ?", "%"+tag+"%")
-		}
-	}
-
-	if err := query.Order("views DESC").Limit(limit).Find(&posts).Error; err != nil {
+	if err := r.db.Where("id IN ?", relatedPostIDs).Order("views DESC").Find(&posts).Error; err != nil {
 		return nil, err
 	}
 	return posts, nil

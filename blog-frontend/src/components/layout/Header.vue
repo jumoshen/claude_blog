@@ -19,6 +19,16 @@
           <span class="link-text">About</span>
         </router-link>
 
+        <!-- Dark Mode Toggle -->
+        <button class="dark-toggle" @click="toggleDarkMode" :title="styleStore.isDark ? '切换亮色模式' : '切换暗黑模式'">
+          <svg v-if="styleStore.isDark" width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M12 3a9 9 0 109 9c0-.46-.04-.92-.1-1.36a5.389 5.389 0 01-4.4 2.26 5.403 5.403 0 01-3.14-9.8c-.44-.06-.9-.1-1.36-.1z"/>
+          </svg>
+          <svg v-else width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M12 3a9 9 0 109 9c0-.46-.04-.92-.1-1.36a5.389 5.389 0 01-4.4 2.26 5.403 5.403 0 01-3.14-9.8c-.44-.06-.9-.1-1.36-.1z"/>
+          </svg>
+        </button>
+
         <el-dropdown @command="handleStyleChange" trigger="click" class="theme-dropdown" :popper-class="'theme-dropdown-panel theme-' + styleStore.currentTheme">
           <span class="style-switcher" :class="'theme-' + styleStore.currentTheme">
             <span class="switcher-icon">{{ styleStore.theme.icon }}</span>
@@ -28,7 +38,7 @@
           <template #dropdown>
             <el-dropdown-menu class="theme-menu">
               <el-dropdown-item
-                v-for="(t, key) in styleStore.themes"
+                v-for="(t, key) in baseThemes"
                 :key="key"
                 :command="key"
                 :class="{ active: key === styleStore.currentTheme, ['theme-' + key]: true }"
@@ -80,7 +90,7 @@
 </template>
 
 <script setup>
-import { onMounted } from 'vue'
+import { onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useUserStore } from '../../store/user'
 import { useStyleStore } from '../../store/style'
@@ -89,6 +99,15 @@ import api from '../../api'
 const router = useRouter()
 const userStore = useUserStore()
 const styleStore = useStyleStore()
+
+// 只显示3个基础主题
+const baseThemes = computed(() => {
+  return {
+    pixel: styleStore.themes.pixel,
+    cute: styleStore.themes.cute,
+    qver: styleStore.themes.qver
+  }
+})
 
 onMounted(async () => {
   try {
@@ -103,6 +122,10 @@ onMounted(async () => {
 
 const handleStyleChange = (theme) => {
   styleStore.setTheme(theme)
+}
+
+const toggleDarkMode = () => {
+  styleStore.toggleDarkMode()
 }
 
 const handleCommand = (command) => {
@@ -231,6 +254,26 @@ const handleCommand = (command) => {
 
 .style-switcher:hover .arrow {
   transform: rotate(180deg);
+}
+
+.dark-toggle {
+  width: 36px;
+  height: 36px;
+  border: none;
+  background: var(--accent-bg);
+  border-radius: 10px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--accent);
+  transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.dark-toggle:hover {
+  background: var(--accent);
+  color: #fff;
+  transform: scale(1.1) rotate(15deg);
 }
 
 /* 主题菜单样式 */

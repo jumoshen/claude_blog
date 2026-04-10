@@ -8,14 +8,15 @@
     </h3>
     <div class="tags">
       <el-tag
-        v-for="(count, tag) in tags"
-        :key="tag"
-        :type="getType(count)"
+        v-for="item in tags"
+        :key="item.slug"
+        :type="getType(item.count)"
         class="tag-item"
-        :class="{ active: activeTag === tag }"
-        @click="handleClick(tag)"
+        :class="{ active: activeTag === item.slug }"
+        :style="getItemStyle(item.color)"
+        @click="handleClick(item.slug)"
       >
-        {{ tag }} ({{ count }})
+        {{ item.slug }} ({{ item.count }})
       </el-tag>
     </div>
   </div>
@@ -26,7 +27,7 @@ import { ref, computed } from 'vue'
 import { useStyleStore } from '../../store/style'
 
 const props = defineProps({
-  tags: { type: Object, default: () => ({}) },
+  tags: { type: Array, default: () => [] },
 })
 
 const emit = defineEmits(['tag-click'])
@@ -45,6 +46,17 @@ const getType = (count) => {
   if (count >= 3) return 'warning'
   if (count >= 2) return 'success'
   return 'info'
+}
+
+const getItemStyle = (color) => {
+  if (color) {
+    return {
+      '--tag-color': color,
+      borderColor: color,
+      color: color
+    }
+  }
+  return {}
 }
 </script>
 
@@ -93,13 +105,13 @@ const getType = (count) => {
 
 .tag-item:hover {
   transform: translateY(-2px) scale(1.05);
-  border-color: var(--accent);
-  color: var(--accent);
+  border-color: var(--tag-color, var(--accent));
+  color: var(--tag-color, var(--accent));
 }
 
 .tag-item.active {
-  background: var(--accent);
-  border-color: var(--accent);
+  background: var(--tag-color, var(--accent));
+  border-color: var(--tag-color, var(--accent));
   color: white;
 }
 

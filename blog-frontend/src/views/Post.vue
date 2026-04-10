@@ -1,10 +1,30 @@
 <template>
   <div class="post-view" v-if="post">
-    <article class="post-content">
+    <!-- TOC Sidebar -->
+    <aside class="toc-sidebar" v-if="toc.length > 0">
+      <div class="toc-title">文章目录</div>
+      <nav class="toc-nav">
+        <a
+          v-for="item in toc"
+          :key="item.id"
+          :href="'#' + item.id"
+          class="toc-item"
+          :class="{ 'toc-h2': item.level === 2, 'toc-h3': item.level === 3 }"
+          @click.prevent="scrollToHeading(item.id)"
+        >
+          {{ item.text }}
+        </a>
+      </nav>
+    </aside>
+
+    <article class="post-content" :class="{ 'has-toc': toc.length > 0 }">
       <h1 class="title">{{ post.title }}</h1>
       <div class="meta">
         <span>{{ formatDate(post.date) }}</span>
         <span>{{ post.views }} views</span>
+        <span v-if="readingTime">约 {{ readingTime }} 分钟读完</span>
+        <span v-if="post.is_pinned" class="pin-badge">置顶</span>
+        <span v-if="post.is_featured" class="feature-badge">推荐</span>
         <div class="post-actions">
           <button class="action-btn like-btn" :class="{ active: isLiked }" @click="toggleLike" :title="isLiked ? '取消点赞' : '点赞'">
             <svg width="18" height="18" viewBox="0 0 24 24" :fill="isLiked ? 'currentColor' : 'none'" stroke="currentColor" stroke-width="2">
@@ -33,6 +53,44 @@
         <el-tag v-for="tag in post.tags" :key="tag" size="small">{{ tag }}</el-tag>
       </div>
       <div class="content" v-html="renderedContent" v-code-copy></div>
+
+      <!-- Navigation: Prev/Next -->
+      <nav class="post-navigation" v-if="navigation">
+        <router-link
+          v-if="navigation.prev"
+          :to="'/post/' + navigation.prev.slug"
+          class="nav-link nav-prev"
+        >
+          <span class="nav-label">上一篇</span>
+          <span class="nav-title">{{ navigation.prev.title }}</span>
+        </router-link>
+        <div v-else></div>
+        <router-link
+          v-if="navigation.next"
+          :to="'/post/' + navigation.next.slug"
+          class="nav-link nav-next"
+        >
+          <span class="nav-label">下一篇</span>
+          <span class="nav-title">{{ navigation.next.title }}</span>
+        </router-link>
+        <div v-else></div>
+      </nav>
+
+      <!-- Related Posts -->
+      <section class="related-posts" v-if="relatedPosts.length > 0">
+        <h3 class="related-title">相关推荐</h3>
+        <div class="related-list">
+          <router-link
+            v-for="related in relatedPosts"
+            :key="related.slug"
+            :to="'/post/' + related.slug"
+            class="related-item"
+          >
+            <span class="related-item-title">{{ related.title }}</span>
+            <span class="related-item-views">{{ related.views }} 阅读</span>
+          </router-link>
+        </div>
+      </section>
     </article>
 
     <!-- Share Poster Modal -->
@@ -50,7 +108,7 @@
     />
 
     <!-- 评论区域 -->
-    <div class="comment-section">
+    <div class="comment-section" :class="{ 'has-toc': toc.length > 0 }">
       <h3 class="comment-title">评论</h3>
 
       <!-- 评论输入框 -->
@@ -131,9 +189,18 @@ const submitting = ref(false)
 const showSharePoster = ref(false)
 const showDonation = ref(false)
 const navigation = ref(null)
+const toc = ref([])
+const relatedPosts = ref([])
 const isLiked = ref(false)
 const isFavorited = ref(false)
 const likeCount = ref(0)
+
+// 阅读时间计算 (字数/200字每分钟)
+const readingTime = computed(() => {
+  if (!content.value) return 0
+  const words = content.value.replace(/[^\u4e00-\u9fa5a-zA-Z0-9]/g, '').length
+  return Math.max(1, Math.ceil(words / 200))
+})
 
 // Comment form
 const commentForm = ref({
@@ -230,6 +297,24 @@ const fetchPost = async () => {
   } catch (e) {
     console.error('Failed to fetch navigation:', e)
   }
+  // Fetch TOC
+  try {
+    const tocRes = await api.getTOC(route.params.slug)
+    if (tocRes.code === 0) {
+      toc.value = tocRes.data || []
+    }
+  } catch (e) {
+    console.error('Failed to fetch TOC:', e)
+  }
+  // Fetch related posts
+  try {
+    const relatedRes = await api.listRelatedPosts(route.params.slug, 5)
+    if (relatedRes.code === 0) {
+      relatedPosts.value = relatedRes.data || []
+    }
+  } catch (e) {
+    console.error('Failed to fetch related posts:', e)
+  }
   // Fetch like count
   try {
     const likeRes = await api.getPostLikes(route.params.slug)
@@ -238,6 +323,14 @@ const fetchPost = async () => {
     }
   } catch (e) {
     console.error('Failed to fetch like count:', e)
+  }
+}
+
+// 滚动到标题
+const scrollToHeading = (id) => {
+  const el = document.getElementById(id)
+  if (el) {
+    el.scrollIntoView({ behavior: 'smooth', block: 'start' })
   }
 }
 
@@ -451,11 +544,83 @@ const formatCommentTime = (date) => {
 .tags .el-tag { margin-right: 5px; background: var(--accent-bg); color: var(--accent); border-color: var(--accent-border); }
 .content { line-height: 1.8; color: var(--text); }
 .content :deep(h1), .content :deep(h2), .content :deep(h3) { margin-top: 30px; margin-bottom: 15px; color: var(--text-h); }
+.content :deep(h2), .content :deep(h3) { padding-top: 60px; margin-top: -45px; }
+.content :deep(h2):first-child, .content :deep(h3):first-child { padding-top: 0; margin-top: 0; }
 .content :deep(pre) { background: var(--code-bg); padding: 15px; border-radius: 4px; overflow-x: auto; }
 .content :deep(code) { background: var(--code-bg); padding: 2px 5px; border-radius: 3px; font-family: monospace; }
 .content :deep(img) { max-width: 100%; }
 .content :deep(a) { color: var(--accent); }
 .content :deep(blockquote) { border-left: 4px solid var(--accent); margin: 20px 0; padding: 10px 20px; background: var(--accent-bg); border-radius: 0 8px 8px 0; }
+
+/* 置顶/推荐标签 */
+.pin-badge, .feature-badge {
+  background: var(--accent);
+  color: #fff;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 500;
+}
+.feature-badge { background: #10b981; }
+
+/* TOC侧边栏 */
+.post-view { display: flex; gap: 30px; max-width: 1100px; }
+.toc-sidebar {
+  width: 200px;
+  flex-shrink: 0;
+  position: sticky;
+  top: 100px;
+  height: fit-content;
+  max-height: calc(100vh - 120px);
+  overflow-y: auto;
+}
+.toc-title { font-size: 14px; font-weight: 600; color: var(--text-h); margin-bottom: 10px; }
+.toc-nav { display: flex; flex-direction: column; gap: 6px; }
+.toc-item { font-size: 13px; color: var(--text); text-decoration: none; padding: 4px 8px; border-radius: 4px; transition: all 0.2s; }
+.toc-item:hover { background: var(--accent-bg); color: var(--accent); }
+.toc-h2 { padding-left: 8px; }
+.toc-h3 { padding-left: 20px; font-size: 12px; }
+
+/* 文章导航 */
+.post-navigation { display: flex; justify-content: space-between; gap: 20px; margin-top: 40px; padding-top: 20px; border-top: 1px solid var(--border); }
+.nav-link { flex: 1; display: flex; flex-direction: column; padding: 15px; background: var(--accent-bg); border-radius: 8px; text-decoration: none; transition: all 0.2s; }
+.nav-link:hover { background: var(--accent); }
+.nav-link:hover .nav-label, .nav-link:hover .nav-title { color: #fff; }
+.nav-prev { align-items: flex-start; }
+.nav-next { align-items: flex-end; }
+.nav-label { font-size: 12px; color: var(--text); margin-bottom: 4px; }
+.nav-title { font-size: 14px; color: var(--text-h); font-weight: 500; }
+.nav-link:hover .nav-label, .nav-link:hover .nav-title { color: #fff; }
+
+/* 相关推荐 */
+.related-posts { margin-top: 40px; padding-top: 20px; border-top: 1px solid var(--border); }
+.related-title { font-size: 16px; color: var(--text-h); margin: 0 0 15px; }
+.related-list { display: flex; flex-direction: column; gap: 10px; }
+.related-item { display: flex; justify-content: space-between; align-items: center; padding: 10px 12px; background: var(--accent-bg); border-radius: 6px; text-decoration: none; transition: all 0.2s; }
+.related-item:hover { background: var(--accent); }
+.related-item:hover .related-item-title, .related-item:hover .related-item-views { color: #fff; }
+.related-item-title { font-size: 14px; color: var(--text-h); }
+.related-item-views { font-size: 12px; color: var(--text); opacity: 0.7; }
+
+/* 响应式 */
+@media (max-width: 768px) {
+  .post-view { flex-direction: column; max-width: 800px; }
+  .toc-sidebar { width: 100%; position: static; max-height: none; }
+  .post-navigation { flex-direction: column; }
+  .nav-prev, .nav-next { align-items: flex-start; }
+}
+
+/* 评论区域 */
+.comment-section {
+  max-width: 800px;
+  margin: 30px auto 0;
+  width: 100%;
+}
+.comment-section.has-toc {
+  max-width: 800px;
+  margin-left: 0;
+  margin-right: 0;
+}
 
 /* 评论区域 */
 .comment-section {

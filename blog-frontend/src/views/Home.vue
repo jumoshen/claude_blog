@@ -18,6 +18,39 @@
           </div>
         </transition>
 
+        <!-- 搜索栏 -->
+        <div class="search-bar">
+          <input
+            v-model="searchKeyword"
+            type="text"
+            placeholder="搜索文章标题或内容..."
+            class="search-input"
+            @keyup.enter="handleSearch"
+          />
+          <button class="search-btn" @click="handleSearch">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="11" cy="11" r="8"></circle>
+              <path d="m21 21-4.35-4.35"></path>
+            </svg>
+          </button>
+        </div>
+
+        <!-- 置顶文章 -->
+        <div v-if="featuredPosts.length > 0 && !searchKeyword && !activeTag && !activeCategory" class="featured-section">
+          <h3 class="featured-title">推荐文章</h3>
+          <div class="featured-list">
+            <router-link
+              v-for="post in featuredPosts"
+              :key="post.slug"
+              :to="'/post/' + post.slug"
+              class="featured-item"
+            >
+              <span class="featured-item-title">{{ post.title }}</span>
+              <span class="featured-item-views">{{ post.views }} 阅读</span>
+            </router-link>
+          </div>
+        </div>
+
         <transition-group name="list" tag="div" class="posts-wrapper">
           <PostCard
             v-for="(post, index) in posts"
@@ -82,6 +115,9 @@ const total = ref(0)
 const hasMore = computed(() => (posts.value?.length || 0) < total.value)
 const loadMoreTrigger = ref(null)
 let observer = null
+const searchKeyword = ref('')
+const featuredPosts = ref([])
+const searchResults = ref([])
 
 const activeTag = computed(() => route.query.tag || '')
 const activeCategory = computed(() => route.query.category || '')
@@ -132,6 +168,40 @@ const clearCategory = () => {
   router.push({ path: '/', query })
 }
 
+// 搜索
+const handleSearch = async () => {
+  if (!searchKeyword.value.trim()) return
+  loading.value = true
+  try {
+    const res = await api.searchPosts(searchKeyword.value.trim())
+    if (res.code === 0) {
+      posts.value = res.data || []
+      total.value = posts.value.length
+    }
+  } catch (e) {
+    console.error('Failed to search posts:', e)
+  } finally {
+    loading.value = false
+  }
+}
+
+const clearSearch = () => {
+  searchKeyword.value = ''
+  fetchPosts(true)
+}
+
+// 获取置顶文章
+const fetchFeaturedPosts = async () => {
+  try {
+    const res = await api.listFeaturedPosts()
+    if (res.code === 0) {
+      featuredPosts.value = res.data || []
+    }
+  } catch (e) {
+    console.error('Failed to fetch featured posts:', e)
+  }
+}
+
 // 监听 tag 和 category 变化，重新加载
 let initialized = false
 watch(activeTag, () => {
@@ -156,6 +226,7 @@ onMounted(async () => {
   if (categoriesRes.code === 0) categories.value = categoriesRes.data
 
   await fetchPosts(true)
+  await fetchFeaturedPosts()
   initialized = true
 
   // 滚动加载 - 提前 300px 触发
@@ -254,6 +325,88 @@ onUnmounted(() => {
 
 .filter-icon {
   font-size: 16px;
+}
+
+/* 搜索栏 */
+.search-bar {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 20px;
+}
+.search-input {
+  flex: 1;
+  padding: 10px 14px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-size: 14px;
+  background: var(--card-bg);
+  color: var(--text);
+}
+.search-input:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+.search-btn {
+  padding: 10px 14px;
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+.search-btn:hover {
+  opacity: 0.9;
+  transform: translateY(-1px);
+}
+
+/* 置顶推荐 */
+.featured-section {
+  margin-bottom: 20px;
+  padding: 16px;
+  background: var(--accent-bg);
+  border-radius: 12px;
+  border: 1px solid var(--accent-border);
+}
+.featured-title {
+  margin: 0 0 12px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-h);
+}
+.featured-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.featured-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 12px;
+  background: var(--card-bg);
+  border-radius: 6px;
+  text-decoration: none;
+  transition: all 0.2s;
+}
+.featured-item:hover {
+  background: var(--accent);
+}
+.featured-item:hover .featured-item-title,
+.featured-item:hover .featured-item-views {
+  color: #fff;
+}
+.featured-item-title {
+  font-size: 14px;
+  color: var(--text-h);
+}
+.featured-item-views {
+  font-size: 12px;
+  color: var(--text);
+  opacity: 0.7;
 }
 
 .empty {

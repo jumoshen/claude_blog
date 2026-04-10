@@ -5,7 +5,7 @@ services:
     image: mysql:8
     container_name: cc-blog-mysql
     environment:
-      - MYSQL_ROOT_PASSWORD=123456
+      - MYSQL_ROOT_PASSWORD=Blog2024Secure
       - MYSQL_DATABASE=blog
     ports:
       - "3307:3306"
@@ -23,10 +23,12 @@ services:
       - cc-blog-net
 
   frontend-api:
-    build: ./frontend-api
+    image: ghcr.io/jumoshen/claude-blog/frontend-api:latest
     container_name: cc-blog-api
     ports:
       - "8080:8080"
+    volumes:
+      - ./frontend-api/config.yaml:/app/config.yaml:ro
     environment:
       - GIN_MODE=release
     depends_on:
@@ -36,7 +38,7 @@ services:
       - cc-blog-net
 
   blog-frontend:
-    build: ./blog-frontend
+    image: ghcr.io/jumoshen/claude-blog/blog-frontend:latest
     container_name: cc-blog-web
     ports:
       - "3000:80"
@@ -47,13 +49,13 @@ services:
 
   file-service:
     image: minio/minio:latest
-    container_name: cc-blog-file-service
+    container_name: cc-blog-minio
     ports:
       - "9000:9000"
       - "9001:9001"
     environment:
-      - MINIO_ROOT_USER=admin
-      - MINIO_ROOT_PASSWORD=12345678
+      - MINIO_ROOT_USER=blogadmin
+      - MINIO_ROOT_PASSWORD=BlogMinIO2024
     volumes:
       - file_data:/data
     networks:
@@ -69,12 +71,6 @@ services:
       - ./deploy/config-admin.yaml:/app/config.yaml:ro
     environment:
       - TZ=Asia/Shanghai
-      - MINIO_ENDPOINT=file-service:9000
-      - MINIO_ACCESS_KEY=admin
-      - MINIO_SECRET_KEY=12345678
-      - MINIO_BUCKET=uploads
-      - MINIO_USE_SSL=false
-      - BASE_URL=http://localhost:9000
     depends_on:
       - mysql
       - file-service
@@ -90,6 +86,23 @@ services:
       - admin-backend
     networks:
       - cc-blog-net
+
+  nginx-proxy:
+    image: nginx:alpine
+    container_name: nginx-proxy
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - /etc/letsencrypt:/etc/letsencrypt:ro
+    networks:
+      - cc-blog-net
+    depends_on:
+      - blog-frontend
+      - frontend-api
+      - admin-backend
+      - admin-frontend
 
 networks:
   cc-blog-net:

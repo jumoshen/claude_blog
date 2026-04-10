@@ -175,8 +175,10 @@ const handleSearch = async () => {
   try {
     const res = await api.searchPosts(searchKeyword.value.trim())
     if (res.code === 0) {
-      posts.value = res.data || []
-      total.value = posts.value.length
+      // 后端返回 { list, total } 格式
+      const data = res.data || {}
+      posts.value = data.list || data || []
+      total.value = data.total || posts.value.length
     }
   } catch (e) {
     console.error('Failed to search posts:', e)

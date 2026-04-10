@@ -50,7 +50,7 @@ export default {
 
   // Auth
   getLoginInfo: () => api.get('/auth/login'),
-  loginCallback: (code) => api.post('/auth/callback', null, { params: { code } }),
+  loginCallback: (code) => api.get('/auth/callback', { params: { code } }),
   logout: () => api.post('/auth/logout'),
   getMe: () => api.get('/auth/me'),
 

@@ -1,84 +1,154 @@
 <template>
   <div class="post-view" v-if="post">
-    <!-- TOC Sidebar -->
-    <aside class="toc-sidebar" v-if="toc.length > 0">
-      <div class="toc-title">文章目录</div>
-      <nav class="toc-nav">
-        <a
-          v-for="item in toc"
-          :key="item.id"
-          :href="'#' + item.id"
-          class="toc-item"
-          :class="{ 'toc-h2': item.level === 2, 'toc-h3': item.level === 3 }"
-          @click.prevent="scrollToHeading(item.id)"
-        >
-          {{ item.text }}
-        </a>
-      </nav>
-    </aside>
-
-    <article class="post-content" :class="{ 'has-toc': toc.length > 0 }">
-      <h1 class="title">{{ post.title }}</h1>
-      <div class="meta">
-        <span>{{ formatDate(post.date) }}</span>
-        <span>{{ post.views }} views</span>
-        <span v-if="readingTime">约 {{ readingTime }} 分钟读完</span>
-        <span v-if="post.is_pinned" class="pin-badge">置顶</span>
-        <span v-if="post.is_featured" class="feature-badge">推荐</span>
-        <div class="post-actions">
-          <button class="action-btn like-btn" :class="{ active: isLiked }" @click="toggleLike" :title="isLiked ? '取消点赞' : '点赞'">
-            <svg width="18" height="18" viewBox="0 0 24 24" :fill="isLiked ? 'currentColor' : 'none'" stroke="currentColor" stroke-width="2">
-              <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
-            </svg>
-            <span class="like-count">{{ likeCount }}</span>
-          </button>
-          <button class="action-btn favorite-btn" :class="{ active: isFavorited }" @click="toggleFavorite" :title="isFavorited ? '取消收藏' : '收藏'">
-            <svg width="18" height="18" viewBox="0 0 24 24" :fill="isFavorited ? 'currentColor' : 'none'" stroke="currentColor" stroke-width="2">
-              <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
-            </svg>
-          </button>
-          <button class="action-btn share-btn" @click="showSharePoster = true" title="分享海报">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M4 12v8a2 2 0 002 2h12a2 2 0 002-2v-8M16 6l-4-4-4 4M12 2v13"/>
-            </svg>
-          </button>
-          <button class="action-btn donate-btn" @click="showDonation = true" title="打赏作者">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
-              <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
-            </svg>
-          </button>
+    <!-- Main Content -->
+    <div class="main-wrapper">
+      <article class="post-content">
+        <h1 class="title">{{ post.title }}</h1>
+        <div class="meta">
+          <span>{{ formatDate(post.date) }}</span>
+          <span>{{ post.views }} views</span>
+          <span v-if="readingTime">约 {{ readingTime }} 分钟读完</span>
+          <span v-if="post.is_pinned" class="pin-badge">置顶</span>
+          <span v-if="post.is_featured" class="feature-badge">推荐</span>
+          <div class="post-actions">
+            <button class="action-btn like-btn" :class="{ active: isLiked }" @click="toggleLike" :title="isLiked ? '取消点赞' : '点赞'">
+              <svg width="18" height="18" viewBox="0 0 24 24" :fill="isLiked ? 'currentColor' : 'none'" stroke="currentColor" stroke-width="2">
+                <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+              </svg>
+              <span class="like-count">{{ likeCount }}</span>
+            </button>
+            <button class="action-btn favorite-btn" :class="{ active: isFavorited }" @click="toggleFavorite" :title="isFavorited ? '取消收藏' : '收藏'">
+              <svg width="18" height="18" viewBox="0 0 24 24" :fill="isFavorited ? 'currentColor' : 'none'" stroke="currentColor" stroke-width="2">
+                <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+              </svg>
+            </button>
+            <button class="action-btn share-btn" @click="showSharePoster = true" title="分享海报">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M4 12v8a2 2 0 002 2h12a2 2 0 002-2v-8M16 6l-4-4-4 4M12 2v13"/>
+              </svg>
+            </button>
+            <button class="action-btn donate-btn" @click="showDonation = true" title="打赏作者">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+              </svg>
+            </button>
+          </div>
         </div>
+        <div class="tags">
+          <el-tag v-for="tag in post.tags" :key="tag" size="small">{{ tag }}</el-tag>
+        </div>
+        <div class="content" v-html="renderedContent" v-code-copy></div>
+      </article>
+
+      <!-- 评论区域 -->
+      <div class="comment-section">
+        <div class="comment-header" @click="showComments = !showComments">
+          <h3 class="comment-title">评论 {{ comments.length > 0 ? '(' + comments.length + ')' : '' }}</h3>
+          <span class="comment-toggle">{{ showComments ? '收起' : '展开' }}</span>
+        </div>
+
+        <transition name="slide">
+          <div v-if="showComments">
+            <!-- 评论输入框 -->
+            <div class="comment-form">
+              <div class="form-row">
+                <input
+                  v-model="commentForm.nickname"
+                  type="text"
+                  placeholder="昵称（必填）"
+                  class="nickname-input"
+                  maxlength="50"
+                />
+              </div>
+              <div class="form-row">
+                <textarea
+                  v-model="commentForm.content"
+                  placeholder="说点什么...（支持弹幕显示）"
+                  class="comment-input"
+                  rows="3"
+                  maxlength="500"
+                  @keydown.enter.exact.prevent="submitComment"
+                ></textarea>
+              </div>
+              <div class="form-row form-actions">
+                <span class="char-count">{{ commentForm.content.length }}/500</span>
+                <button
+                  class="submit-btn"
+                  :disabled="submitting || !canSubmit"
+                  @click="submitComment"
+                >
+                  {{ submitting ? '发送中...' : '发送评论' }}
+                </button>
+              </div>
+            </div>
+
+            <!-- 评论列表 -->
+            <div class="comment-list" v-if="comments.length > 0">
+              <div
+                v-for="comment in comments"
+                :key="comment.id"
+                class="comment-item"
+              >
+                <div class="comment-header-row">
+                  <span class="comment-nickname">{{ comment.nickname }}</span>
+                  <span class="comment-time">{{ formatCommentTime(comment.created_at) }}</span>
+                </div>
+                <div class="comment-content">{{ comment.content }}</div>
+              </div>
+            </div>
+            <div v-else class="no-comments">
+              暂无评论，来抢沙发吧~
+            </div>
+          </div>
+        </transition>
       </div>
-      <div class="tags">
-        <el-tag v-for="tag in post.tags" :key="tag" size="small">{{ tag }}</el-tag>
+    </div>
+
+    <!-- Right Sidebar -->
+    <aside class="post-sidebar">
+      <!-- TOC -->
+      <div v-if="toc.length > 0" class="sidebar-block">
+        <div class="block-title">文章目录</div>
+        <nav class="toc-nav">
+          <a
+            v-for="item in toc"
+            :key="item.id"
+            :href="'#' + item.id"
+            class="toc-item"
+            :class="{ 'toc-h2': item.level === 2, 'toc-h3': item.level === 3 }"
+            @click.prevent="scrollToHeading(item.id)"
+          >
+            {{ item.text }}
+          </a>
+        </nav>
       </div>
-      <div class="content" v-html="renderedContent" v-code-copy></div>
 
       <!-- Navigation: Prev/Next -->
-      <nav class="post-navigation" v-if="navigation">
-        <router-link
-          v-if="navigation.prev"
-          :to="'/post/' + navigation.prev.slug"
-          class="nav-link nav-prev"
-        >
-          <span class="nav-label">上一篇</span>
-          <span class="nav-title">{{ navigation.prev.title }}</span>
-        </router-link>
-        <div v-else></div>
-        <router-link
-          v-if="navigation.next"
-          :to="'/post/' + navigation.next.slug"
-          class="nav-link nav-next"
-        >
-          <span class="nav-label">下一篇</span>
-          <span class="nav-title">{{ navigation.next.title }}</span>
-        </router-link>
-        <div v-else></div>
-      </nav>
+      <div v-if="navigation" class="sidebar-block">
+        <div class="block-title">导航</div>
+        <div class="nav-list">
+          <router-link
+            v-if="navigation.prev"
+            :to="'/post/' + navigation.prev.slug"
+            class="nav-item nav-prev"
+          >
+            <span class="nav-arrow">←</span>
+            <span class="nav-text">{{ navigation.prev.title }}</span>
+          </router-link>
+          <router-link
+            v-if="navigation.next"
+            :to="'/post/' + navigation.next.slug"
+            class="nav-item nav-next"
+          >
+            <span class="nav-text">{{ navigation.next.title }}</span>
+            <span class="nav-arrow">→</span>
+          </router-link>
+        </div>
+      </div>
 
       <!-- Related Posts -->
-      <section class="related-posts" v-if="relatedPosts.length > 0">
-        <h3 class="related-title">相关推荐</h3>
+      <div v-if="relatedPosts.length > 0" class="sidebar-block">
+        <div class="block-title">相关推荐</div>
         <div class="related-list">
           <router-link
             v-for="related in relatedPosts"
@@ -86,12 +156,12 @@
             :to="'/post/' + related.slug"
             class="related-item"
           >
-            <span class="related-item-title">{{ related.title }}</span>
-            <span class="related-item-views">{{ related.views }} 阅读</span>
+            <span class="related-title">{{ related.title }}</span>
+            <span class="related-views">{{ related.views }} 阅读</span>
           </router-link>
         </div>
-      </section>
-    </article>
+      </div>
+    </aside>
 
     <!-- Share Poster Modal -->
     <SharePoster
@@ -106,69 +176,6 @@
       :post="post"
       @close="showDonation = false"
     />
-
-    <!-- 评论区域 -->
-    <div class="comment-section" :class="{ 'has-toc': toc.length > 0 }">
-      <div class="comment-header" @click="showComments = !showComments">
-        <h3 class="comment-title">评论 {{ comments.length > 0 ? '(' + comments.length + ')' : '' }}</h3>
-        <span class="comment-toggle">{{ showComments ? '收起' : '展开' }}</span>
-      </div>
-
-      <transition name="slide">
-        <div v-if="showComments">
-          <!-- 评论输入框 -->
-      <div class="comment-form">
-        <div class="form-row">
-          <input
-            v-model="commentForm.nickname"
-            type="text"
-            placeholder="昵称（必填）"
-            class="nickname-input"
-            maxlength="50"
-          />
-        </div>
-        <div class="form-row">
-          <textarea
-            v-model="commentForm.content"
-            placeholder="说点什么...（支持弹幕显示）"
-            class="comment-input"
-            rows="3"
-            maxlength="500"
-            @keydown.enter.exact.prevent="submitComment"
-          ></textarea>
-        </div>
-        <div class="form-row form-actions">
-          <span class="char-count">{{ commentForm.content.length }}/500</span>
-          <button
-            class="submit-btn"
-            :disabled="submitting || !canSubmit"
-            @click="submitComment"
-          >
-            {{ submitting ? '发送中...' : '发送评论' }}
-          </button>
-        </div>
-      </div>
-
-      <!-- 评论列表 -->
-      <div class="comment-list" v-if="comments.length > 0">
-        <div
-          v-for="comment in comments"
-          :key="comment.id"
-          class="comment-item"
-        >
-          <div class="comment-header">
-            <span class="comment-nickname">{{ comment.nickname }}</span>
-            <span class="comment-time">{{ formatCommentTime(comment.created_at) }}</span>
-          </div>
-          <div class="comment-content">{{ comment.content }}</div>
-        </div>
-      </div>
-      <div v-else class="no-comments">
-        暂无评论，来抢沙发吧~
-      </div>
-        </div>
-      </transition>
-    </div>
   </div>
 </template>
 
@@ -489,44 +496,26 @@ const formatCommentTime = (date) => {
 </script>
 
 <style scoped>
-.post-view { max-width: 800px; margin: 0 auto; padding: 40px 20px; }
+/* 布局 */
+.post-view { display: flex; gap: 30px; max-width: 1200px; margin: 0 auto; padding: 40px 20px; }
+.main-wrapper { flex: 1; min-width: 0; }
+
+/* 文章内容 */
 .post-content { background: var(--card-bg); padding: 30px; border-radius: 8px; box-shadow: 0 4px 20px var(--shadow); }
 .title { margin: 0 0 15px; color: var(--text-h); }
-.meta { color: var(--text); opacity: 0.7; font-size: 14px; margin-bottom: 15px; display: flex; align-items: center; gap: 15px; }
+.meta { color: var(--text); opacity: 0.7; font-size: 14px; margin-bottom: 15px; display: flex; align-items: center; gap: 15px; flex-wrap: wrap; }
 .meta span { margin-right: 0; }
 .post-actions { display: flex; gap: 8px; margin-left: auto; }
 .action-btn {
-  width: 44px;
-  height: 44px;
-  border: 2px solid var(--border);
-  border-radius: 50%;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
-  background: var(--card-bg);
-  position: relative;
-  overflow: hidden;
+  width: 44px; height: 44px; border: 2px solid var(--border); border-radius: 50%; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1); background: var(--card-bg);
+  position: relative; overflow: hidden;
 }
-.action-btn::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(135deg, transparent 0%, rgba(255,255,255,0.1) 50%, transparent 100%);
-  opacity: 0;
-  transition: opacity 0.3s;
-}
-.action-btn:hover::before {
-  opacity: 1;
-}
-.action-btn:hover {
-  transform: translateY(-4px) scale(1.1);
-  box-shadow: 0 12px 35px var(--shadow);
-}
-.action-btn:active {
-  transform: translateY(-2px) scale(1.05);
-}
+.action-btn::before { content: ''; position: absolute; inset: 0; background: linear-gradient(135deg, transparent 0%, rgba(255,255,255,0.1) 50%, transparent 100%); opacity: 0; transition: opacity 0.3s; }
+.action-btn:hover::before { opacity: 1; }
+.action-btn:hover { transform: translateY(-4px) scale(1.1); box-shadow: 0 12px 35px var(--shadow); }
+.action-btn:active { transform: translateY(-2px) scale(1.05); }
 .share-btn { color: var(--accent); border-color: var(--accent-border); }
 .share-btn:hover { background: var(--accent); color: #fff; border-color: var(--accent); }
 .donate-btn { color: #ff6b9d; border-color: rgba(255, 107, 157, 0.3); }
@@ -534,20 +523,12 @@ const formatCommentTime = (date) => {
 .like-btn { color: #ff6b6b; border-color: rgba(255, 107, 107, 0.3); display: flex; align-items: center; gap: 4px; }
 .like-btn:hover { background: linear-gradient(135deg, #ff6b6b, #ff8e8e); color: #fff; border-color: #ff6b6b; box-shadow: 0 12px 35px rgba(255, 107, 107, 0.4); }
 .like-btn.active { background: #ff6b6b; color: #fff; border-color: #ff6b6b; animation: likePulse 0.4s ease; }
-@keyframes likePulse {
-  0% { transform: scale(1); }
-  50% { transform: scale(1.3); }
-  100% { transform: scale(1); }
-}
+@keyframes likePulse { 0% { transform: scale(1); } 50% { transform: scale(1.3); } 100% { transform: scale(1); } }
 .like-count { font-size: 12px; font-weight: 600; }
 .favorite-btn { color: #ffd700; border-color: rgba(255, 215, 0, 0.3); }
 .favorite-btn:hover { background: linear-gradient(135deg, #ffd700, #ffed4a); color: #fff; border-color: #ffd700; box-shadow: 0 12px 35px rgba(255, 215, 0, 0.4); }
 .favorite-btn.active { background: #ffd700; color: #fff; border-color: #ffd700; animation: starPulse 0.5s ease; }
-@keyframes starPulse {
-  0% { transform: scale(1) rotate(0deg); }
-  50% { transform: scale(1.3) rotate(10deg); }
-  100% { transform: scale(1) rotate(0deg); }
-}
+@keyframes starPulse { 0% { transform: scale(1) rotate(0deg); } 50% { transform: scale(1.3) rotate(10deg); } 100% { transform: scale(1) rotate(0deg); } }
 .tags { margin-bottom: 20px; }
 .tags .el-tag { margin-right: 5px; background: var(--accent-bg); color: var(--accent); border-color: var(--accent-border); }
 .content { line-height: 1.8; color: var(--text); }
@@ -561,233 +542,76 @@ const formatCommentTime = (date) => {
 .content :deep(blockquote) { border-left: 4px solid var(--accent); margin: 20px 0; padding: 10px 20px; background: var(--accent-bg); border-radius: 0 8px 8px 0; }
 
 /* 置顶/推荐标签 */
-.pin-badge, .feature-badge {
-  background: var(--accent);
-  color: #fff;
-  padding: 2px 8px;
-  border-radius: 4px;
-  font-size: 12px;
-  font-weight: 500;
-}
+.pin-badge, .feature-badge { background: var(--accent); color: #fff; padding: 2px 8px; border-radius: 4px; font-size: 12px; font-weight: 500; }
 .feature-badge { background: #10b981; }
 
-/* TOC侧边栏 */
-.post-view { display: flex; gap: 30px; max-width: 1100px; }
-.toc-sidebar {
-  width: 200px;
-  flex-shrink: 0;
-  position: sticky;
-  top: 100px;
-  height: fit-content;
-  max-height: calc(100vh - 120px);
-  overflow-y: auto;
-}
-.toc-title { font-size: 14px; font-weight: 600; color: var(--text-h); margin-bottom: 10px; }
-.toc-nav { display: flex; flex-direction: column; gap: 6px; }
+/* 右侧边栏 */
+.post-sidebar { width: 260px; flex-shrink: 0; display: flex; flex-direction: column; gap: 20px; }
+.sidebar-block { background: var(--card-bg); border-radius: 8px; padding: 16px; box-shadow: 0 4px 20px var(--shadow); }
+.block-title { font-size: 14px; font-weight: 600; color: var(--text-h); margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid var(--border); }
+
+/* TOC */
+.toc-nav { display: flex; flex-direction: column; gap: 4px; max-height: 300px; overflow-y: auto; }
 .toc-item { font-size: 13px; color: var(--text); text-decoration: none; padding: 4px 8px; border-radius: 4px; transition: all 0.2s; }
 .toc-item:hover { background: var(--accent-bg); color: var(--accent); }
 .toc-h2 { padding-left: 8px; }
-.toc-h3 { padding-left: 20px; font-size: 12px; }
+.toc-h3 { padding-left: 16px; font-size: 12px; }
 
-/* 文章导航 */
-.post-navigation { display: flex; justify-content: space-between; gap: 20px; margin-top: 40px; padding-top: 20px; border-top: 1px solid var(--border); }
-.nav-link { flex: 1; display: flex; flex-direction: column; padding: 15px; background: var(--accent-bg); border-radius: 8px; text-decoration: none; transition: all 0.2s; }
-.nav-link:hover { background: var(--accent); }
-.nav-link:hover .nav-label, .nav-link:hover .nav-title { color: #fff; }
-.nav-prev { align-items: flex-start; }
-.nav-next { align-items: flex-end; }
-.nav-label { font-size: 12px; color: var(--text); margin-bottom: 4px; }
-.nav-title { font-size: 14px; color: var(--text-h); font-weight: 500; }
-.nav-link:hover .nav-label, .nav-link:hover .nav-title { color: #fff; }
+/* 导航 */
+.nav-list { display: flex; flex-direction: column; gap: 8px; }
+.nav-item { display: flex; align-items: center; gap: 8px; padding: 10px 12px; background: var(--accent-bg); border-radius: 6px; text-decoration: none; transition: all 0.2s; }
+.nav-item:hover { background: var(--accent); }
+.nav-item:hover .nav-text, .nav-item:hover .nav-arrow { color: #fff; }
+.nav-prev { flex-direction: row; }
+.nav-next { flex-direction: row-reverse; }
+.nav-text { font-size: 13px; color: var(--text-h); flex: 1; }
+.nav-arrow { font-size: 14px; color: var(--accent); }
 
 /* 相关推荐 */
-.related-posts { margin-top: 40px; padding-top: 20px; border-top: 1px solid var(--border); }
-.related-title { font-size: 16px; color: var(--text-h); margin: 0 0 15px; }
-.related-list { display: flex; flex-direction: column; gap: 10px; }
-.related-item { display: flex; justify-content: space-between; align-items: center; padding: 10px 12px; background: var(--accent-bg); border-radius: 6px; text-decoration: none; transition: all 0.2s; }
+.related-list { display: flex; flex-direction: column; gap: 8px; }
+.related-item { display: flex; flex-direction: column; gap: 4px; padding: 10px 12px; background: var(--accent-bg); border-radius: 6px; text-decoration: none; transition: all 0.2s; }
 .related-item:hover { background: var(--accent); }
-.related-item:hover .related-item-title, .related-item:hover .related-item-views { color: #fff; }
-.related-item-title { font-size: 14px; color: var(--text-h); }
-.related-item-views { font-size: 12px; color: var(--text); opacity: 0.7; }
-
-/* 响应式 */
-@media (max-width: 768px) {
-  .post-view { flex-direction: column; max-width: 800px; }
-  .toc-sidebar { width: 100%; position: static; max-height: none; }
-  .post-navigation { flex-direction: column; }
-  .nav-prev, .nav-next { align-items: flex-start; }
-}
+.related-item:hover .related-title, .related-item:hover .related-views { color: #fff; }
+.related-title { font-size: 13px; color: var(--text-h); line-height: 1.4; }
+.related-views { font-size: 11px; color: var(--text); opacity: 0.7; }
 
 /* 评论区域 */
-.comment-section {
-  max-width: 860px;
-  margin: 30px auto 0;
-  width: 100%;
-  background: var(--card-bg);
-  padding: 20px;
-  border-radius: 8px;
-  box-shadow: 0 4px 20px var(--shadow);
-}
-.comment-section.has-toc {
-  max-width: 860px;
-  margin-left: 0;
-  margin-right: 0;
-}
-
-.comment-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  cursor: pointer;
-  user-select: none;
-}
-.comment-title {
-  margin: 0;
-  font-size: 18px;
-  color: var(--text-h);
-}
-.comment-toggle {
-  font-size: 13px;
-  color: var(--accent);
-  padding: 4px 12px;
-  background: var(--accent-bg);
-  border-radius: 12px;
-}
-.comment-toggle:hover {
-  background: var(--accent);
-  color: #fff;
-}
+.comment-section { margin-top: 30px; background: var(--card-bg); padding: 20px; border-radius: 8px; box-shadow: 0 4px 20px var(--shadow); }
+.comment-header { display: flex; justify-content: space-between; align-items: center; cursor: pointer; user-select: none; }
+.comment-title { margin: 0; font-size: 18px; color: var(--text-h); }
+.comment-toggle { font-size: 13px; color: var(--accent); padding: 4px 12px; background: var(--accent-bg); border-radius: 12px; }
+.comment-toggle:hover { background: var(--accent); color: #fff; }
 
 /* 折叠动画 */
-.slide-enter-active,
-.slide-leave-active {
-  transition: all 0.3s ease;
-  overflow: hidden;
-}
-.slide-enter-from,
-.slide-leave-to {
-  opacity: 0;
-  max-height: 0;
-}
-.slide-enter-to,
-.slide-leave-from {
-  opacity: 1;
-  max-height: 1000px;
-}
+.slide-enter-active, .slide-leave-active { transition: all 0.3s ease; overflow: hidden; }
+.slide-enter-from, .slide-leave-to { opacity: 0; max-height: 0; }
+.slide-enter-to, .slide-leave-from { opacity: 1; max-height: 1000px; }
 
-.comment-form {
-  margin-bottom: 20px;
-}
+.comment-form { margin-top: 16px; }
+.form-row { margin-bottom: 10px; }
+.nickname-input { width: 100%; padding: 10px 12px; border: 1px solid var(--border); border-radius: 6px; font-size: 14px; box-sizing: border-box; background: var(--bg); color: var(--text); }
+.nickname-input:focus { outline: none; border-color: var(--accent); }
+.comment-input { width: 100%; padding: 10px 12px; border: 1px solid var(--border); border-radius: 6px; font-size: 14px; resize: vertical; font-family: inherit; box-sizing: border-box; background: var(--bg); color: var(--text); }
+.comment-input:focus { outline: none; border-color: var(--accent); }
+.form-actions { display: flex; justify-content: space-between; align-items: center; }
+.char-count { font-size: 12px; color: #999; }
+.submit-btn { padding: 8px 20px; background: var(--accent); color: white; border: none; border-radius: 6px; font-size: 14px; cursor: pointer; transition: all 0.2s; }
+.submit-btn:hover:not(:disabled) { opacity: 0.9; transform: translateY(-1px); }
+.submit-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+.comment-list { display: flex; flex-direction: column; gap: 15px; margin-top: 16px; }
+.comment-item { padding: 12px; background: var(--accent-bg); border-radius: 6px; }
+.comment-header-row { display: flex; justify-content: space-between; margin-bottom: 6px; }
+.comment-nickname { font-weight: bold; color: var(--accent); font-size: 14px; }
+.comment-time { font-size: 12px; color: var(--text); opacity: 0.7; }
+.comment-content { font-size: 14px; color: var(--text); line-height: 1.6; word-break: break-all; }
+.no-comments { text-align: center; color: var(--text); opacity: 0.6; padding: 20px; }
 
-.form-row {
-  margin-bottom: 10px;
+/* 响应式 */
+@media (max-width: 1024px) {
+  .post-sidebar { width: 220px; }
 }
-
-.nickname-input {
-  width: 100%;
-  padding: 10px 12px;
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  font-size: 14px;
-  box-sizing: border-box;
-  background: var(--bg);
-  color: var(--text);
-}
-
-.nickname-input:focus {
-  outline: none;
-  border-color: var(--accent);
-}
-
-.comment-input {
-  width: 100%;
-  padding: 10px 12px;
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  font-size: 14px;
-  resize: vertical;
-  font-family: inherit;
-  box-sizing: border-box;
-  background: var(--bg);
-  color: var(--text);
-}
-
-.comment-input:focus {
-  outline: none;
-  border-color: var(--accent);
-}
-
-.form-actions {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.char-count {
-  font-size: 12px;
-  color: #999;
-}
-
-.submit-btn {
-  padding: 8px 20px;
-  background: var(--accent, #646cff);
-  color: white;
-  border: none;
-  border-radius: 6px;
-  font-size: 14px;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.submit-btn:hover:not(:disabled) {
-  opacity: 0.9;
-  transform: translateY(-1px);
-}
-
-.submit-btn:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
-.comment-list {
-  display: flex;
-  flex-direction: column;
-  gap: 15px;
-}
-
-.comment-item {
-  padding: 12px;
-  background: #f9f9f9;
-  border-radius: 6px;
-}
-
-.comment-header {
-  display: flex;
-  justify-content: space-between;
-  margin-bottom: 6px;
-}
-
-.comment-nickname {
-  font-weight: bold;
-  color: var(--accent, #646cff);
-  font-size: 14px;
-}
-
-.comment-time {
-  font-size: 12px;
-  color: #999;
-}
-
-.comment-content {
-  font-size: 14px;
-  color: #333;
-  line-height: 1.6;
-  word-break: break-all;
-}
-
-.no-comments {
-  text-align: center;
-  color: #999;
-  padding: 20px;
+@media (max-width: 768px) {
+  .post-view { flex-direction: column; }
+  .post-sidebar { width: 100%; }
 }
 </style>

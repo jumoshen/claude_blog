@@ -27,10 +27,11 @@ type Post struct {
 	Views      int64  `gorm:"default:0"`
 	Status     int    `gorm:"default:1;index"`       // 0=草稿 1=已发布 2=下架 3=待发布
 	CategoryID *uint  `gorm:"index;comment:分类ID"` // 关联分类
-	IsPinned   bool       `gorm:"default:false;comment:是否置顶"`
-	IsFeatured bool       `gorm:"default:false;comment:是否推荐"`
-	PinnedAt   *time.Time `gorm:"comment:置顶时间"`
-	ScheduledAt *time.Time `gorm:"comment:定时发布时间"`
+	IsPinned    bool        `gorm:"default:false;comment:是否置顶"`
+	IsFeatured bool        `gorm:"default:false;comment:是否推荐"`
+	PinnedAt   *time.Time  `gorm:"comment:置顶时间"`
+	ScheduledAt *time.Time  `gorm:"comment:定时发布时间"`
+	PasswordHash string     `gorm:"size:255;default:'';comment:文章密码保护"`
 }
 
 type Visit struct {
@@ -113,4 +114,28 @@ type PostFavorite struct {
 	PostID    uint      `gorm:"not null;uniqueIndex:uk_post_user;comment:文章ID"`
 	UserID    uint      `gorm:"not null;uniqueIndex:uk_post_user;comment:用户ID"`
 	CreatedAt time.Time `gorm:"autoCreateTime"`
+}
+
+// AdminLog 管理后台操作日志
+type AdminLog struct {
+	ID         uint      `gorm:"primaryKey"`
+	UserID     uint      `gorm:"not null;comment:管理员ID"`
+	Username   string    `gorm:"size:50;not null;comment:管理员用户名"`
+	Action     string    `gorm:"size:100;not null;comment:操作类型"`
+	TargetType string    `gorm:"size:50;not null;comment:目标类型"`
+	TargetID   *uint     `gorm:"comment:目标ID"`
+	TargetName string    `gorm:"size:255;default:'';comment:目标名称"`
+	Details    string    `gorm:"type:text;comment:操作详情"`
+	IP         string    `gorm:"size:50;default:'';comment:IP地址"`
+	UserAgent  string    `gorm:"size:500;default:'';comment:User-Agent"`
+	CreatedAt  time.Time `gorm:"autoCreateTime"`
+}
+
+// AdminRole 管理员角色
+type AdminRole struct {
+	ID          uint      `gorm:"primaryKey"`
+	Name        string    `gorm:"size:50;not null;comment:角色名称"`
+	Permissions string    `gorm:"type:text;comment:权限列表JSON"`
+	CreatedAt   time.Time
+	UpdatedAt   time.Time
 }

@@ -72,6 +72,7 @@ func main() {
 	categoryHandler := handler.NewCategoryHandler(svc, l)
 	tagHandler := handler.NewTagHandler(svc, l)
 	userHandler := handler.NewUserHandler(svc, l)
+	adminHandler := handler.NewAdminHandler(svc, l)
 
 	// Setup Gin
 	gin.SetMode(gin.ReleaseMode)
@@ -108,6 +109,8 @@ func main() {
 		v1.GET("/posts/:slug/likes", postHandler.GetPostLikes)
 		v1.POST("/posts/:slug/like", middleware.AuthMiddleware(jwtUtil), postHandler.LikePost)
 		v1.POST("/posts/:slug/favorite", middleware.AuthMiddleware(jwtUtil), postHandler.FavoritePost)
+		v1.GET("/posts/:slug/check", postHandler.CheckPassword)
+		v1.POST("/posts/:slug/verify", postHandler.VerifyPassword)
 		v1.GET("/posts/:slug", postHandler.GetPost)
 
 		// User routes
@@ -173,6 +176,10 @@ func main() {
 			admin.PUT("/posts/:id/pin", postHandler.SetPostPin)
 			admin.PUT("/posts/:id/feature", postHandler.SetPostFeature)
 			admin.POST("/posts/:id/schedule", postHandler.SchedulePost)
+			admin.POST("/posts/:slug/password", postHandler.SetPassword)
+
+			// Admin log routes
+			admin.GET("/logs", adminHandler.ListAdminLogs)
 		}
 	}
 

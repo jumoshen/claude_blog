@@ -200,6 +200,19 @@ func (r *Repository) CreateVisit(visit *model.Visit) error {
 	return r.db.Create(visit).Error
 }
 
+// CanRecordVisit 检查是否可以记录访问（防刷）
+func (r *Repository) CanRecordVisit(ctx context.Context, postSlug string, ip string, userID int64) (bool, error) {
+	key := fmt.Sprintf("visit:%s:%s:%d", postSlug, ip, userID)
+
+	// 使用 SETNX，1小时内不重复记录
+	exists, err := r.redis.SetNX(ctx, key, "1", time.Hour).Result()
+	if err != nil {
+		// Redis 错误时允许记录
+		return true, nil
+	}
+	return exists, nil
+}
+
 // Comment operations
 func (r *Repository) CreateComment(comment *model.Comment) error {
 	return r.db.Create(comment).Error
@@ -690,4 +703,36 @@ func (r *Repository) ListUserFavorites(userID uint) ([]model.Post, error) {
 		return nil, err
 	}
 	return posts, nil
+}
+
+// HasPassword 检查文章是否有密码保护
+func (r *Repository) HasPassword(slug string) (bool, error) {
+	var post model.Post
+	if err := r.db.Select("password_hash").Where("slug = ?", slug).First(&post).Error; err != nil {
+		return false, err
+	}
+	return post.PasswordHash != "", nil
+}
+
+// AdminLog operations
+func (r *Repository) CreateAdminLog(log *model.AdminLog) error {
+	return r.db.Create(log).Error
+}
+
+func (r *Repository) ListAdminLogs(page, pageSize int) ([]model.AdminLog, int64, error) {
+	var logs []model.AdminLog
+	var total int64
+
+	query := r.db.Model(&model.AdminLog{})
+
+	if err := query.Count(&total).Error; err != nil {
+		return nil, 0, err
+	}
+
+	offset := (page - 1) * pageSize
+	if err := query.Order("created_at DESC").Offset(offset).Limit(pageSize).Find(&logs).Error; err != nil {
+		return nil, 0, err
+	}
+
+	return logs, total, nil
 }

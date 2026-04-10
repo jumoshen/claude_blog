@@ -419,16 +419,24 @@ func (s *Service) Logout(ctx context.Context, jti string, exp time.Time) error {
 	return s.repo.AddToBlacklist(ctx, jti, ttl)
 }
 
-// RecordVisit 记录访问日志
+// RecordVisit 记录访问日志（防刷）
 func (s *Service) RecordVisit(slug, ip, userAgent string, userID int64) {
-	visit := &model.Visit{
-		PostSlug:  slug,
-		IP:        ip,
-		UserAgent: userAgent,
-		UserID:    userID,
-	}
-	// 异步记录，不阻塞请求
+	// 异步检查并记录，不阻塞请求
 	go func() {
+		ctx := context.Background()
+
+		// 防刷检查
+		canRecord, _ := s.repo.CanRecordVisit(ctx, slug, ip, userID)
+		if !canRecord {
+			return // 1小时内已记录过，跳过
+		}
+
+		visit := &model.Visit{
+			PostSlug:  slug,
+			IP:        ip,
+			UserAgent: userAgent,
+			UserID:    userID,
+		}
 		s.repo.CreateVisit(visit)
 	}()
 }
@@ -1306,4 +1314,101 @@ func (s *Service) ListMyFavorites(userID uint) ([]PostInfo, error) {
 		})
 	}
 	return result, nil
+}
+
+// HasPassword 检查文章是否有密码保护
+func (s *Service) HasPassword(slug string) (bool, error) {
+	return s.repo.HasPassword(slug)
+}
+
+// VerifyPostPassword 验证文章密码
+func (s *Service) VerifyPostPassword(slug, password string) (bool, error) {
+	post, err := s.repo.GetPostBySlug(slug)
+	if err != nil {
+		return false, err
+	}
+
+	if post.PasswordHash == "" {
+		return true, nil // 没有密码，直接通过
+	}
+
+	if err := bcrypt.CompareHashAndPassword([]byte(post.PasswordHash), []byte(password)); err != nil {
+		return false, nil
+	}
+	return true, nil
+}
+
+// SetPostPassword 设置文章密码
+func (s *Service) SetPostPassword(slug, password string) error {
+	post, err := s.repo.GetPostBySlug(slug)
+	if err != nil {
+		return err
+	}
+
+	if password == "" {
+		post.PasswordHash = ""
+	} else {
+		hashed, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+		if err != nil {
+			return err
+		}
+		post.PasswordHash = string(hashed)
+	}
+
+	return s.repo.UpdatePost(post)
+}
+
+// AdminLogInfo 操作日志信息
+type AdminLogInfo struct {
+	ID         uint   `json:"id"`
+	UserID     uint   `json:"user_id"`
+	Username   string `json:"username"`
+	Action     string `json:"action"`
+	TargetType string `json:"target_type"`
+	TargetID   *uint  `json:"target_id"`
+	TargetName string `json:"target_name"`
+	Details    string `json:"details"`
+	IP         string `json:"ip"`
+	CreatedAt  string `json:"created_at"`
+}
+
+// RecordAdminLog 记录管理后台操作
+func (s *Service) RecordAdminLog(userID uint, username, action, targetType string, targetID *uint, targetName, details, ip, userAgent string) error {
+	log := &model.AdminLog{
+		UserID:     userID,
+		Username:   username,
+		Action:     action,
+		TargetType: targetType,
+		TargetID:   targetID,
+		TargetName: targetName,
+		Details:    details,
+		IP:         ip,
+		UserAgent:  userAgent,
+	}
+	return s.repo.CreateAdminLog(log)
+}
+
+// ListAdminLogs 获取操作日志
+func (s *Service) ListAdminLogs(page, pageSize int) ([]AdminLogInfo, int64, error) {
+	logs, total, err := s.repo.ListAdminLogs(page, pageSize)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	result := make([]AdminLogInfo, 0, len(logs))
+	for _, l := range logs {
+		result = append(result, AdminLogInfo{
+			ID:         l.ID,
+			UserID:     l.UserID,
+			Username:   l.Username,
+			Action:     l.Action,
+			TargetType: l.TargetType,
+			TargetID:   l.TargetID,
+			TargetName: l.TargetName,
+			Details:    l.Details,
+			IP:         l.IP,
+			CreatedAt:  l.CreatedAt.Format("2006-01-02 15:04:05"),
+		})
+	}
+	return result, total, nil
 }

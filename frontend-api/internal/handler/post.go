@@ -531,6 +531,92 @@ func (h *PostHandler) ListMyFavorites(c *gin.Context) {
 	response.Success(c, posts)
 }
 
+// CheckPassword 检查文章是否有密码保护
+// @Summary Check if post has password protection
+// @Description Returns whether a post requires password
+// @Tags posts
+// @Produce json
+// @Param slug path string true "Post slug"
+// @Success 200 {object} response.Response
+// @Router /api/v1/posts/{slug}/check [get]
+func (h *PostHandler) CheckPassword(c *gin.Context) {
+	slug := c.Param("slug")
+
+	hasPassword, err := h.svc.HasPassword(slug)
+	if err != nil {
+		response.NotFound(c, "Post not found")
+		return
+	}
+
+	response.Success(c, gin.H{"protected": hasPassword})
+}
+
+// VerifyPassword 验证文章密码
+// @Summary Verify post password
+// @Description Verify if the provided password is correct
+// @Tags posts
+// @Produce json
+// @Param slug path string true "Post slug"
+// @Param password body string true "Password"
+// @Success 200 {object} response.Response
+// @Router /api/v1/posts/{slug}/verify [post]
+func (h *PostHandler) VerifyPassword(c *gin.Context) {
+	slug := c.Param("slug")
+
+	var req struct {
+		Password string `json:"password" binding:"required"`
+	}
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.BadRequest(c, "Password required")
+		return
+	}
+
+	valid, err := h.svc.VerifyPostPassword(slug, req.Password)
+	if err != nil {
+		response.NotFound(c, "Post not found")
+		return
+	}
+
+	if !valid {
+		response.Error(c, 403, "Invalid password")
+		return
+	}
+
+	response.Success(c, gin.H{"valid": true})
+}
+
+// SetPassword 设置文章密码（管理后台）
+// @Summary Set post password
+// @Description Set or remove password protection for a post
+// @Tags admin
+// @Security BearerAuth
+// @Produce json
+// @Param slug path string true "Post slug"
+// @Param password body string true "Password (empty to remove)"
+// @Success 200 {object} response.Response
+// @Router /api/admin/posts/{slug}/password [post]
+func (h *PostHandler) SetPassword(c *gin.Context) {
+	slug := c.Param("slug")
+
+	var req struct {
+		Password string `json:"password"`
+	}
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.BadRequest(c, "Invalid request")
+		return
+	}
+
+	if err := h.svc.SetPostPassword(slug, req.Password); err != nil {
+		h.log.Error("Failed to set password: %v", err)
+		response.InternalError(c, "Failed to set password")
+		return
+	}
+
+	response.Success(c, gin.H{"message": "Password set successfully"})
+}
+
 // GetSitemap generates XML sitemap
 // @Summary Get sitemap
 // @Description Returns XML sitemap for SEO

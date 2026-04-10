@@ -105,3 +105,44 @@ func VisitLogger(createVisit func(*model.Visit) error, getUserID func(*gin.Conte
 		}
 	}
 }
+
+// RequirePermission 权限检查中间件
+func RequirePermission(requiredPermission string) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		claims := GetUserClaims(c)
+		if claims == nil {
+			response.Unauthorized(c, "Not logged in")
+			c.Abort()
+			return
+		}
+
+		// 从 context 获取用户权限
+		permissions, exists := c.Get("permissions")
+		if !exists {
+			// 如果没有权限信息，默认放行（兼容旧逻辑）
+			c.Next()
+			return
+		}
+
+		perms, ok := permissions.([]string)
+		if !ok {
+			c.Next()
+			return
+		}
+
+		// 检查是否有 * 权限（超级管理员）
+		for _, p := range perms {
+			if p == "*" {
+				c.Next()
+				return
+			}
+			if p == requiredPermission {
+				c.Next()
+				return
+			}
+		}
+
+		response.Forbidden(c, "Permission denied")
+		c.Abort()
+	}
+}

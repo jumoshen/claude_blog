@@ -25,7 +25,12 @@ type Post struct {
 	Summary    string `gorm:"type:text"`
 	Content    string `gorm:"type:longtext"`
 	Views      int64  `gorm:"default:0"`
-	Status     int    `gorm:"default:1;index"` // 0=草稿 1=已发布 2=下架
+	Status     int    `gorm:"default:1;index"`       // 0=草稿 1=已发布 2=下架 3=待发布
+	CategoryID *uint  `gorm:"index;comment:分类ID"` // 关联分类
+	IsPinned   bool       `gorm:"default:false;comment:是否置顶"`
+	IsFeatured bool       `gorm:"default:false;comment:是否推荐"`
+	PinnedAt   *time.Time `gorm:"comment:置顶时间"`
+	ScheduledAt *time.Time `gorm:"comment:定时发布时间"`
 }
 
 type Visit struct {
@@ -53,4 +58,29 @@ type SensitiveWord struct {
 	gorm.Model
 	Word  string `gorm:"size:100;uniqueIndex"`
 	Level int    `gorm:"default:1"`
+}
+
+// Category 文章分类表
+type Category struct {
+	gorm.Model
+	Name        string `gorm:"size:100;not null;comment:分类名称"`
+	Slug        string `gorm:"size:100;not null;uniqueIndex;comment:分类别名"`
+	Description string `gorm:"size:500;comment:分类描述"`
+	Sort        int    `gorm:"default:0;comment:排序权重"`
+}
+
+// Tag 文章标签表
+type Tag struct {
+	gorm.Model
+	Name  string `gorm:"size:100;not null;comment:标签名称"`
+	Slug  string `gorm:"size:100;not null;uniqueIndex;comment:标签别名"`
+	Color string `gorm:"size:20;default:'';comment:标签颜色"`
+}
+
+// PostTag 文章标签关联表
+type PostTag struct {
+	ID        uint      `gorm:"primaryKey"`
+	PostID    uint      `gorm:"not null;comment:文章ID;index:idx_tag_id"`
+	TagID     uint      `gorm:"not null;comment:标签ID;index:idx_tag_id"`
+	CreatedAt time.Time `gorm:"autoCreateTime"`
 }

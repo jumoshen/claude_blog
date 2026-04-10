@@ -3,6 +3,7 @@ package handler
 import (
 	"html/template"
 	"strconv"
+	"time"
 
 	"github.com/gin-gonic/gin"
 
@@ -176,6 +177,253 @@ func (h *PostHandler) GetCategories(c *gin.Context) {
 	}
 
 	response.Success(c, categories)
+}
+
+// SearchPosts 搜索文章
+// @Summary Search posts
+// @Description Search posts by keyword in title and content
+// @Tags posts
+// @Produce json
+// @Param q query string true "Search keyword"
+// @Param page query int false "Page number" default(1)
+// @Param page_size query int false "Page size" default(10)
+// @Success 200 {object} response.Response
+// @Router /api/v1/posts/search [get]
+func (h *PostHandler) SearchPosts(c *gin.Context) {
+	keyword := c.Query("q")
+	if keyword == "" {
+		response.BadRequest(c, "Search keyword is required")
+		return
+	}
+
+	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+	pageSize, _ := strconv.Atoi(c.DefaultQuery("page_size", "10"))
+
+	if page < 1 {
+		page = 1
+	}
+	if pageSize < 1 || pageSize > 100 {
+		pageSize = 10
+	}
+
+	posts, total, err := h.svc.SearchPosts(keyword, page, pageSize)
+	if err != nil {
+		h.log.Error("Failed to search posts: %v", err)
+		response.InternalError(c, "Failed to search posts")
+		return
+	}
+
+	response.Success(c, gin.H{
+		"list":      posts,
+		"total":     total,
+		"page":      page,
+		"page_size": pageSize,
+	})
+}
+
+// ListFeaturedPosts 获取推荐文章
+// @Summary Get featured posts
+// @Description Returns a list of featured posts
+// @Tags posts
+// @Produce json
+// @Success 200 {object} response.Response
+// @Router /api/v1/posts/featured [get]
+func (h *PostHandler) ListFeaturedPosts(c *gin.Context) {
+	posts, err := h.svc.ListFeaturedPosts()
+	if err != nil {
+		h.log.Error("Failed to list featured posts: %v", err)
+		response.InternalError(c, "Failed to load featured posts")
+		return
+	}
+
+	response.Success(c, posts)
+}
+
+// SetPostPin 设置/取消置顶
+// @Summary Set post pin status
+// @Description Toggle pin status of a post
+// @Tags admin
+// @Security BearerAuth
+// @Produce json
+// @Param id path int true "Post ID"
+// @Param pinned query bool true "Pin status"
+// @Success 200 {object} response.Response
+// @Router /api/admin/posts/{id}/pin [put]
+func (h *PostHandler) SetPostPin(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		response.BadRequest(c, "Invalid post ID")
+		return
+	}
+
+	pinnedStr := c.Query("pinned")
+	pinned := pinnedStr == "true" || pinnedStr == "1"
+
+	if err := h.svc.SetPostPin(uint(id), pinned); err != nil {
+		h.log.Error("Failed to set post pin: %v", err)
+		response.InternalError(c, "Failed to update post")
+		return
+	}
+
+	response.Success(c, gin.H{"message": "Post pin status updated"})
+}
+
+// SetPostFeature 设置/取消推荐
+// @Summary Set post feature status
+// @Description Toggle feature status of a post
+// @Tags admin
+// @Security BearerAuth
+// @Produce json
+// @Param id path int true "Post ID"
+// @Param featured query bool true "Feature status"
+// @Success 200 {object} response.Response
+// @Router /api/admin/posts/{id}/feature [put]
+func (h *PostHandler) SetPostFeature(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		response.BadRequest(c, "Invalid post ID")
+		return
+	}
+
+	featuredStr := c.Query("featured")
+	featured := featuredStr == "true" || featuredStr == "1"
+
+	if err := h.svc.SetPostFeature(uint(id), featured); err != nil {
+		h.log.Error("Failed to set post feature: %v", err)
+		response.InternalError(c, "Failed to update post")
+		return
+	}
+
+	response.Success(c, gin.H{"message": "Post feature status updated"})
+}
+
+// SchedulePost 设置定时发布
+// @Summary Schedule a post
+// @Description Set a post to be published at a scheduled time
+// @Tags admin
+// @Security BearerAuth
+// @Produce json
+// @Param id path int true "Post ID"
+// @Param scheduled_at body string true "Scheduled time (RFC3339 format)"
+// @Success 200 {object} response.Response
+// @Router /api/admin/posts/{id}/schedule [post]
+func (h *PostHandler) SchedulePost(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		response.BadRequest(c, "Invalid post ID")
+		return
+	}
+
+	var req struct {
+		ScheduledAt string `json:"scheduled_at" binding:"required"`
+	}
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.BadRequest(c, "Invalid request: "+err.Error())
+		return
+	}
+
+	scheduledAt, err := time.Parse(time.RFC3339, req.ScheduledAt)
+	if err != nil {
+		response.BadRequest(c, "Invalid date format, use RFC3339")
+		return
+	}
+
+	if err := h.svc.SchedulePost(uint(id), scheduledAt); err != nil {
+		h.log.Error("Failed to schedule post: %v", err)
+		response.InternalError(c, "Failed to schedule post")
+		return
+	}
+
+	response.Success(c, gin.H{"message": "Post scheduled successfully"})
+}
+
+// GetTOC 获取文章目录
+// @Summary Get post table of contents
+// @Description Returns the table of contents for a post
+// @Tags posts
+// @Produce json
+// @Param slug path string true "Post slug"
+// @Success 200 {object} response.Response
+// @Router /api/v1/posts/{slug}/toc [get]
+func (h *PostHandler) GetTOC(c *gin.Context) {
+	slug := c.Param("slug")
+	_, content, err := h.svc.GetPost(slug)
+	if err != nil {
+		response.NotFound(c, "Post not found")
+		return
+	}
+
+	toc := h.svc.ExtractTOC(content)
+	response.Success(c, gin.H{"toc": toc})
+}
+
+// GetNavigation 获取文章导航（上一篇、下一篇）
+// @Summary Get post navigation
+// @Description Returns previous and next posts for navigation
+// @Tags posts
+// @Produce json
+// @Param slug path string true "Post slug"
+// @Success 200 {object} response.Response
+// @Router /api/v1/posts/{slug}/navigation [get]
+func (h *PostHandler) GetNavigation(c *gin.Context) {
+	slug := c.Param("slug")
+	nav, err := h.svc.GetPostNavigation(slug)
+	if err != nil {
+		response.NotFound(c, "Post not found")
+		return
+	}
+
+	response.Success(c, nav)
+}
+
+// ListPopularPosts 获取热门文章
+// @Summary Get popular posts
+// @Description Returns a list of popular posts by views
+// @Tags posts
+// @Produce json
+// @Param limit query int false "Number of posts to return" default(10)
+// @Success 200 {object} response.Response
+// @Router /api/v1/posts/popular [get]
+func (h *PostHandler) ListPopularPosts(c *gin.Context) {
+	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "10"))
+	if limit <= 0 || limit > 50 {
+		limit = 10
+	}
+
+	posts, err := h.svc.ListPopularPosts(limit)
+	if err != nil {
+		h.log.Error("Failed to list popular posts: %v", err)
+		response.InternalError(c, "Failed to load popular posts")
+		return
+	}
+
+	response.Success(c, posts)
+}
+
+// ListRelatedPosts 获取相关文章
+// @Summary Get related posts
+// @Description Returns a list of related posts by tags
+// @Tags posts
+// @Produce json
+// @Param slug path string true "Post slug"
+// @Param limit query int false "Number of posts to return" default(5)
+// @Success 200 {object} response.Response
+// @Router /api/v1/posts/{slug}/related [get]
+func (h *PostHandler) ListRelatedPosts(c *gin.Context) {
+	slug := c.Param("slug")
+	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "5"))
+	if limit <= 0 || limit > 20 {
+		limit = 5
+	}
+
+	posts, err := h.svc.ListRelatedPosts(slug, limit)
+	if err != nil {
+		response.NotFound(c, "Post not found")
+		return
+	}
+
+	response.Success(c, posts)
 }
 
 // GetSitemap generates XML sitemap

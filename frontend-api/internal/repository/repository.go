@@ -286,3 +286,305 @@ func (r *Repository) InvalidateSensitiveWordsCache(ctx context.Context) error {
 	key := "sensitive_words:cache"
 	return r.redis.Del(ctx, key).Err()
 }
+
+// Category operations
+func (r *Repository) ListCategories(page, pageSize int) ([]model.Category, int64, error) {
+	var categories []model.Category
+	var total int64
+
+	query := r.db.Model(&model.Category{}).Where("deleted_at IS NULL")
+
+	if err := query.Count(&total).Error; err != nil {
+		return nil, 0, err
+	}
+
+	offset := (page - 1) * pageSize
+	if err := query.Order("sort ASC, id ASC").Offset(offset).Limit(pageSize).Find(&categories).Error; err != nil {
+		return nil, 0, err
+	}
+
+	return categories, total, nil
+}
+
+func (r *Repository) ListAllCategories() ([]model.Category, error) {
+	var categories []model.Category
+	if err := r.db.Where("deleted_at IS NULL").Order("sort ASC, id ASC").Find(&categories).Error; err != nil {
+		return nil, err
+	}
+	return categories, nil
+}
+
+func (r *Repository) GetCategoryByID(id uint) (*model.Category, error) {
+	var category model.Category
+	if err := r.db.Where("id = ? AND deleted_at IS NULL", id).First(&category).Error; err != nil {
+		return nil, err
+	}
+	return &category, nil
+}
+
+func (r *Repository) GetCategoryBySlug(slug string) (*model.Category, error) {
+	var category model.Category
+	if err := r.db.Where("slug = ? AND deleted_at IS NULL", slug).First(&category).Error; err != nil {
+		return nil, err
+	}
+	return &category, nil
+}
+
+func (r *Repository) CreateCategory(category *model.Category) error {
+	return r.db.Create(category).Error
+}
+
+func (r *Repository) UpdateCategory(category *model.Category) error {
+	return r.db.Save(category).Error
+}
+
+func (r *Repository) DeleteCategory(id uint) error {
+	return r.db.Delete(&model.Category{}, id).Error
+}
+
+func (r *Repository) CountPostsByCategory(categoryID uint) (int64, error) {
+	var count int64
+	if err := r.db.Model(&model.Post{}).Where("category_id = ? AND deleted_at IS NULL", categoryID).Count(&count).Error; err != nil {
+		return 0, err
+	}
+	return count, nil
+}
+
+// Tag operations
+func (r *Repository) ListTags(page, pageSize int) ([]model.Tag, int64, error) {
+	var tags []model.Tag
+	var total int64
+
+	query := r.db.Model(&model.Tag{}).Where("deleted_at IS NULL")
+
+	if err := query.Count(&total).Error; err != nil {
+		return nil, 0, err
+	}
+
+	offset := (page - 1) * pageSize
+	if err := query.Order("id ASC").Offset(offset).Limit(pageSize).Find(&tags).Error; err != nil {
+		return nil, 0, err
+	}
+
+	return tags, total, nil
+}
+
+func (r *Repository) ListAllTags() ([]model.Tag, error) {
+	var tags []model.Tag
+	if err := r.db.Where("deleted_at IS NULL").Order("id ASC").Find(&tags).Error; err != nil {
+		return nil, err
+	}
+	return tags, nil
+}
+
+func (r *Repository) GetTagByID(id uint) (*model.Tag, error) {
+	var tag model.Tag
+	if err := r.db.Where("id = ? AND deleted_at IS NULL", id).First(&tag).Error; err != nil {
+		return nil, err
+	}
+	return &tag, nil
+}
+
+func (r *Repository) GetTagBySlug(slug string) (*model.Tag, error) {
+	var tag model.Tag
+	if err := r.db.Where("slug = ? AND deleted_at IS NULL", slug).First(&tag).Error; err != nil {
+		return nil, err
+	}
+	return &tag, nil
+}
+
+func (r *Repository) CreateTag(tag *model.Tag) error {
+	return r.db.Create(tag).Error
+}
+
+func (r *Repository) UpdateTag(tag *model.Tag) error {
+	return r.db.Save(tag).Error
+}
+
+func (r *Repository) DeleteTag(id uint) error {
+	return r.db.Delete(&model.Tag{}, id).Error
+}
+
+func (r *Repository) CountPostsByTag(tagID uint) (int64, error) {
+	var count int64
+	if err := r.db.Model(&model.PostTag{}).Where("tag_id = ?", tagID).Count(&count).Error; err != nil {
+		return 0, err
+	}
+	return count, nil
+}
+
+func (r *Repository) GetTagIDsByPostID(postID uint) ([]uint, error) {
+	var postTags []model.PostTag
+	if err := r.db.Where("post_id = ?", postID).Find(&postTags).Error; err != nil {
+		return nil, err
+	}
+	ids := make([]uint, 0, len(postTags))
+	for _, pt := range postTags {
+		ids = append(ids, pt.TagID)
+	}
+	return ids, nil
+}
+
+func (r *Repository) SetPostTags(postID uint, tagIDs []uint) error {
+	// 删除旧的关联
+	if err := r.db.Where("post_id = ?", postID).Delete(&model.PostTag{}).Error; err != nil {
+		return err
+	}
+	// 创建新的关联
+	for _, tagID := range tagIDs {
+		pt := model.PostTag{PostID: postID, TagID: tagID}
+		if err := r.db.Create(&pt).Error; err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// SearchPosts 搜索文章（标题和内容）
+func (r *Repository) SearchPosts(keyword string, page, pageSize int) ([]model.Post, int64, error) {
+	var posts []model.Post
+	var total int64
+
+	query := r.db.Model(&model.Post{}).Where("status = 1")
+
+	if keyword != "" {
+		keyword = "%" + keyword + "%"
+		query = query.Where("title LIKE ? OR content LIKE ?", keyword, keyword)
+	}
+
+	if err := query.Count(&total).Error; err != nil {
+		return nil, 0, err
+	}
+
+	offset := (page - 1) * pageSize
+	if err := query.Order("is_pinned DESC, date DESC").Offset(offset).Limit(pageSize).Find(&posts).Error; err != nil {
+		return nil, 0, err
+	}
+
+	return posts, total, nil
+}
+
+// ListPostsPinned 获取置顶文章
+func (r *Repository) ListPostsPinned() ([]model.Post, error) {
+	var posts []model.Post
+	if err := r.db.Where("status = 1 AND is_pinned = ?", true).Order("pinned_at DESC").Find(&posts).Error; err != nil {
+		return nil, err
+	}
+	return posts, nil
+}
+
+// ListPostsFeatured 获取推荐文章
+func (r *Repository) ListPostsFeatured() ([]model.Post, error) {
+	var posts []model.Post
+	if err := r.db.Where("status = 1 AND is_featured = ?", true).Order("date DESC").Find(&posts).Error; err != nil {
+		return nil, err
+	}
+	return posts, nil
+}
+
+// SetPostPinned 设置/取消置顶
+func (r *Repository) SetPostPinned(id uint, pinned bool) error {
+	var pinnedAt *time.Time
+	if pinned {
+		now := time.Now()
+		pinnedAt = &now
+	}
+	return r.db.Model(&model.Post{}).Where("id = ?", id).Updates(map[string]interface{}{
+		"is_pinned": pinned,
+		"pinned_at": pinnedAt,
+	}).Error
+}
+
+// SetPostFeatured 设置/取消推荐
+func (r *Repository) SetPostFeatured(id uint, featured bool) error {
+	return r.db.Model(&model.Post{}).Where("id = ?", id).Update("is_featured", featured).Error
+}
+
+// SchedulePost 设置定时发布
+func (r *Repository) SchedulePost(id uint, scheduledAt time.Time) error {
+	return r.db.Model(&model.Post{}).Where("id = ?", id).Updates(map[string]interface{}{
+		"scheduled_at": scheduledAt,
+		"status":        3, // 待发布
+	}).Error
+}
+
+// PublishScheduledPosts 发布已到时的定时文章
+func (r *Repository) PublishScheduledPosts() (int64, error) {
+	result := r.db.Model(&model.Post{}).
+		Where("status = ? AND scheduled_at <= ?", 3, time.Now()).
+		Updates(map[string]interface{}{
+			"status":        1, // 已发布
+			"scheduled_at":  nil,
+		})
+	return result.RowsAffected, result.Error
+}
+
+// GetPostByID 根据ID获取文章
+func (r *Repository) GetPostByID(id uint) (*model.Post, error) {
+	var post model.Post
+	if err := r.db.First(&post, id).Error; err != nil {
+		return nil, err
+	}
+	return &post, nil
+}
+
+// GetPrevPost 获取上一篇文章（按日期排序，当前文章之前的）
+func (r *Repository) GetPrevPost(currentDate time.Time, currentSlug string) (*model.Post, error) {
+	var post model.Post
+	err := r.db.Where("status = 1 AND date < ? AND slug != ?", currentDate, currentSlug).
+		Order("date DESC").First(&post).Error
+	if err == gorm.ErrRecordNotFound {
+		return nil, nil
+	}
+	return &post, err
+}
+
+// GetNextPost 获取下一篇文章（按日期排序，当前文章之后的）
+func (r *Repository) GetNextPost(currentDate time.Time, currentSlug string) (*model.Post, error) {
+	var post model.Post
+	err := r.db.Where("status = 1 AND date > ? AND slug != ?", currentDate, currentSlug).
+		Order("date ASC").First(&post).Error
+	if err == gorm.ErrRecordNotFound {
+		return nil, nil
+	}
+	return &post, err
+}
+
+// ListPopularPosts 获取热门文章（按浏览量排序）
+func (r *Repository) ListPopularPosts(limit int) ([]model.Post, error) {
+	var posts []model.Post
+	if err := r.db.Where("status = 1").Order("views DESC").Limit(limit).Find(&posts).Error; err != nil {
+		return nil, err
+	}
+	return posts, nil
+}
+
+// ListRelatedPosts 获取相关文章（共享标签）
+func (r *Repository) ListRelatedPosts(currentSlug string, tags string, limit int) ([]model.Post, error) {
+	var posts []model.Post
+
+	// 如果没有标签，返回空
+	if tags == "" {
+		return posts, nil
+	}
+
+	// 解析标签
+	tagList := strings.Split(tags, ",")
+	if len(tagList) == 0 {
+		return posts, nil
+	}
+
+	// 构建查询条件：共享任意标签
+	query := r.db.Where("status = 1 AND slug != ?", currentSlug)
+	for _, tag := range tagList {
+		tag = strings.TrimSpace(tag)
+		if tag != "" {
+			query = query.Or("tags LIKE ?", "%"+tag+"%")
+		}
+	}
+
+	if err := query.Order("views DESC").Limit(limit).Find(&posts).Error; err != nil {
+		return nil, err
+	}
+	return posts, nil
+}

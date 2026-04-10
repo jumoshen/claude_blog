@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 	"unicode/utf8"
@@ -55,13 +56,17 @@ func NewWithRedis(cfg *config.Config, redisClient *redis.Client) (*Service, erro
 }
 
 type PostInfo struct {
-	Slug       string    `json:"slug"`
-	Title      string    `json:"title"`
-	Date       time.Time `json:"date"`
-	Tags       []string  `json:"tags"`
-	Categories []string  `json:"categories"`
-	Summary    string    `json:"summary"`
-	Views      int64     `json:"views"`
+	Slug        string     `json:"slug"`
+	Title       string     `json:"title"`
+	Date        time.Time  `json:"date"`
+	Tags        []string   `json:"tags"`
+	Categories  []string   `json:"categories"`
+	Summary     string     `json:"summary"`
+	Views       int64      `json:"views"`
+	IsPinned    bool       `json:"is_pinned"`
+	IsFeatured  bool       `json:"is_featured"`
+	ScheduledAt *time.Time `json:"scheduled_at,omitempty"`
+	ReadingTime int        `json:"reading_time"` // 阅读时间（分钟）
 }
 
 type UserInfo struct {
@@ -87,13 +92,16 @@ func (s *Service) ListPosts() ([]PostInfo, error) {
 	result := make([]PostInfo, 0, len(posts))
 	for _, p := range posts {
 		result = append(result, PostInfo{
-			Slug:       p.Slug,
-			Title:      p.Title,
-			Date:       p.Date,
-			Tags:       strings.Split(p.Tags, ","),
-			Categories: strings.Split(p.Categories, ","),
-			Summary:    p.Summary,
-			Views:      p.Views,
+			Slug:        p.Slug,
+			Title:       p.Title,
+			Date:        p.Date,
+			Tags:        strings.Split(p.Tags, ","),
+			Categories:  strings.Split(p.Categories, ","),
+			Summary:     p.Summary,
+			Views:       p.Views,
+			IsPinned:    p.IsPinned,
+			IsFeatured:  p.IsFeatured,
+			ScheduledAt: p.ScheduledAt,
 		})
 	}
 	return result, nil
@@ -109,13 +117,17 @@ func (s *Service) ListPostsPaginated(tag string, page, pageSize int) ([]PostInfo
 	result := make([]PostInfo, 0, len(posts))
 	for _, p := range posts {
 		result = append(result, PostInfo{
-			Slug:       p.Slug,
-			Title:      p.Title,
-			Date:       p.Date,
-			Tags:       strings.Split(p.Tags, ","),
-			Categories: strings.Split(p.Categories, ","),
-			Summary:    p.Summary,
-			Views:      p.Views,
+			Slug:        p.Slug,
+			Title:       p.Title,
+			Date:        p.Date,
+			Tags:        strings.Split(p.Tags, ","),
+			Categories:  strings.Split(p.Categories, ","),
+			Summary:     p.Summary,
+			Views:       p.Views,
+			IsPinned:    p.IsPinned,
+			IsFeatured:  p.IsFeatured,
+			ScheduledAt: p.ScheduledAt,
+			ReadingTime: CalculateReadingTime(p.Content),
 		})
 	}
 	return result, total, nil
@@ -132,13 +144,17 @@ func (s *Service) GetPost(slug string) (*PostInfo, string, error) {
 	s.repo.GetDB().Model(post).Update("views", gorm.Expr("views + 1"))
 
 	info := &PostInfo{
-		Slug:       post.Slug,
-		Title:      post.Title,
-		Date:       post.Date,
-		Tags:       strings.Split(post.Tags, ","),
-		Categories: strings.Split(post.Categories, ","),
-		Summary:    post.Summary,
-		Views:      post.Views + 1,
+		Slug:        post.Slug,
+		Title:       post.Title,
+		Date:        post.Date,
+		Tags:        strings.Split(post.Tags, ","),
+		Categories:  strings.Split(post.Categories, ","),
+		Summary:     post.Summary,
+		Views:       post.Views + 1,
+		IsPinned:    post.IsPinned,
+		IsFeatured:  post.IsFeatured,
+		ReadingTime: CalculateReadingTime(post.Content),
+		ScheduledAt: post.ScheduledAt,
 	}
 
 	return info, post.Content, nil
@@ -553,4 +569,529 @@ func toLower(s string) string {
 		result = append(result, c)
 	}
 	return string(result)
+}
+
+// CategoryInfo 分类信息
+type CategoryInfo struct {
+	ID          uint   `json:"id"`
+	Name        string `json:"name"`
+	Slug        string `json:"slug"`
+	Description string `json:"description"`
+	Sort        int    `json:"sort"`
+	PostCount   int64  `json:"post_count"`
+	CreatedAt   string `json:"created_at"`
+}
+
+// Category operations
+func (s *Service) ListCategories(page, pageSize int) ([]CategoryInfo, int64, error) {
+	categories, total, err := s.repo.ListCategories(page, pageSize)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	result := make([]CategoryInfo, 0, len(categories))
+	for _, c := range categories {
+		count, _ := s.repo.CountPostsByCategory(c.ID)
+		result = append(result, CategoryInfo{
+			ID:          c.ID,
+			Name:        c.Name,
+			Slug:        c.Slug,
+			Description: c.Description,
+			Sort:        c.Sort,
+			PostCount:   count,
+			CreatedAt:   c.CreatedAt.Format("2006-01-02"),
+		})
+	}
+	return result, total, nil
+}
+
+func (s *Service) ListAllCategories() ([]CategoryInfo, error) {
+	categories, err := s.repo.ListAllCategories()
+	if err != nil {
+		return nil, err
+	}
+
+	result := make([]CategoryInfo, 0, len(categories))
+	for _, c := range categories {
+		count, _ := s.repo.CountPostsByCategory(c.ID)
+		result = append(result, CategoryInfo{
+			ID:          c.ID,
+			Name:        c.Name,
+			Slug:        c.Slug,
+			Description: c.Description,
+			Sort:        c.Sort,
+			PostCount:   count,
+			CreatedAt:   c.CreatedAt.Format("2006-01-02"),
+		})
+	}
+	return result, nil
+}
+
+func (s *Service) GetCategoryByID(id uint) (*CategoryInfo, error) {
+	category, err := s.repo.GetCategoryByID(id)
+	if err != nil {
+		return nil, err
+	}
+	count, _ := s.repo.CountPostsByCategory(category.ID)
+	return &CategoryInfo{
+		ID:          category.ID,
+		Name:        category.Name,
+		Slug:        category.Slug,
+		Description: category.Description,
+		Sort:        category.Sort,
+		PostCount:   count,
+		CreatedAt:   category.CreatedAt.Format("2006-01-02"),
+	}, nil
+}
+
+func (s *Service) CreateCategory(name, slug, description string, sort int) (*CategoryInfo, error) {
+	category := &model.Category{
+		Name:        name,
+		Slug:        slug,
+		Description: description,
+		Sort:        sort,
+	}
+	if err := s.repo.CreateCategory(category); err != nil {
+		return nil, err
+	}
+	return &CategoryInfo{
+		ID:          category.ID,
+		Name:        category.Name,
+		Slug:        category.Slug,
+		Description: category.Description,
+		Sort:        category.Sort,
+		PostCount:   0,
+		CreatedAt:   category.CreatedAt.Format("2006-01-02"),
+	}, nil
+}
+
+func (s *Service) UpdateCategory(id uint, name, slug, description string, sort int) (*CategoryInfo, error) {
+	category, err := s.repo.GetCategoryByID(id)
+	if err != nil {
+		return nil, err
+	}
+	category.Name = name
+	category.Slug = slug
+	category.Description = description
+	category.Sort = sort
+	if err := s.repo.UpdateCategory(category); err != nil {
+		return nil, err
+	}
+	count, _ := s.repo.CountPostsByCategory(category.ID)
+	return &CategoryInfo{
+		ID:          category.ID,
+		Name:        category.Name,
+		Slug:        category.Slug,
+		Description: category.Description,
+		Sort:        category.Sort,
+		PostCount:   count,
+		CreatedAt:   category.CreatedAt.Format("2006-01-02"),
+	}, nil
+}
+
+func (s *Service) DeleteCategory(id uint) error {
+	count, err := s.repo.CountPostsByCategory(id)
+	if err != nil {
+		return err
+	}
+	if count > 0 {
+		return fmt.Errorf("该分类下有 %d 篇文章，无法删除", count)
+	}
+	return s.repo.DeleteCategory(id)
+}
+
+// TagInfo 标签信息
+type TagInfo struct {
+	ID        uint   `json:"id"`
+	Name      string `json:"name"`
+	Slug      string `json:"slug"`
+	Color     string `json:"color"`
+	PostCount int64  `json:"post_count"`
+	CreatedAt string `json:"created_at"`
+}
+
+func (s *Service) ListTags(page, pageSize int) ([]TagInfo, int64, error) {
+	tags, total, err := s.repo.ListTags(page, pageSize)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	result := make([]TagInfo, 0, len(tags))
+	for _, t := range tags {
+		count, _ := s.repo.CountPostsByTag(t.ID)
+		result = append(result, TagInfo{
+			ID:        t.ID,
+			Name:      t.Name,
+			Slug:      t.Slug,
+			Color:     t.Color,
+			PostCount: count,
+			CreatedAt: t.CreatedAt.Format("2006-01-02"),
+		})
+	}
+	return result, total, nil
+}
+
+func (s *Service) ListAllTags() ([]TagInfo, error) {
+	tags, err := s.repo.ListAllTags()
+	if err != nil {
+		return nil, err
+	}
+
+	result := make([]TagInfo, 0, len(tags))
+	for _, t := range tags {
+		count, _ := s.repo.CountPostsByTag(t.ID)
+		result = append(result, TagInfo{
+			ID:        t.ID,
+			Name:      t.Name,
+			Slug:      t.Slug,
+			Color:     t.Color,
+			PostCount: count,
+			CreatedAt: t.CreatedAt.Format("2006-01-02"),
+		})
+	}
+	return result, nil
+}
+
+func (s *Service) GetTagByID(id uint) (*TagInfo, error) {
+	tag, err := s.repo.GetTagByID(id)
+	if err != nil {
+		return nil, err
+	}
+	count, _ := s.repo.CountPostsByTag(tag.ID)
+	return &TagInfo{
+		ID:        tag.ID,
+		Name:      tag.Name,
+		Slug:      tag.Slug,
+		Color:     tag.Color,
+		PostCount: count,
+		CreatedAt: tag.CreatedAt.Format("2006-01-02"),
+	}, nil
+}
+
+func (s *Service) CreateTag(name, slug, color string) (*TagInfo, error) {
+	tag := &model.Tag{
+		Name:  name,
+		Slug:  slug,
+		Color: color,
+	}
+	if err := s.repo.CreateTag(tag); err != nil {
+		return nil, err
+	}
+	return &TagInfo{
+		ID:        tag.ID,
+		Name:      tag.Name,
+		Slug:      tag.Slug,
+		Color:     tag.Color,
+		PostCount: 0,
+		CreatedAt: tag.CreatedAt.Format("2006-01-02"),
+	}, nil
+}
+
+func (s *Service) UpdateTag(id uint, name, slug, color string) (*TagInfo, error) {
+	tag, err := s.repo.GetTagByID(id)
+	if err != nil {
+		return nil, err
+	}
+	tag.Name = name
+	tag.Slug = slug
+	tag.Color = color
+	if err := s.repo.UpdateTag(tag); err != nil {
+		return nil, err
+	}
+	count, _ := s.repo.CountPostsByTag(tag.ID)
+	return &TagInfo{
+		ID:        tag.ID,
+		Name:      tag.Name,
+		Slug:      tag.Slug,
+		Color:     tag.Color,
+		PostCount: count,
+		CreatedAt: tag.CreatedAt.Format("2006-01-02"),
+	}, nil
+}
+
+func (s *Service) DeleteTag(id uint) error {
+	count, err := s.repo.CountPostsByTag(id)
+	if err != nil {
+		return err
+	}
+	if count > 0 {
+		return fmt.Errorf("该标签被 %d 篇文章使用，无法删除", count)
+	}
+	return s.repo.DeleteTag(id)
+}
+
+// SearchPosts 搜索文章
+func (s *Service) SearchPosts(keyword string, page, pageSize int) ([]PostInfo, int64, error) {
+	posts, total, err := s.repo.SearchPosts(keyword, page, pageSize)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	result := make([]PostInfo, 0, len(posts))
+	for _, p := range posts {
+		result = append(result, PostInfo{
+			Slug:        p.Slug,
+			Title:       p.Title,
+			Date:        p.Date,
+			Tags:        strings.Split(p.Tags, ","),
+			Categories:  strings.Split(p.Categories, ","),
+			Summary:     p.Summary,
+			Views:       p.Views,
+			IsPinned:    p.IsPinned,
+			IsFeatured:  p.IsFeatured,
+			ScheduledAt: p.ScheduledAt,
+		})
+	}
+	return result, total, nil
+}
+
+// ListFeaturedPosts 获取推荐文章
+func (s *Service) ListFeaturedPosts() ([]PostInfo, error) {
+	posts, err := s.repo.ListPostsFeatured()
+	if err != nil {
+		return nil, err
+	}
+
+	result := make([]PostInfo, 0, len(posts))
+	for _, p := range posts {
+		result = append(result, PostInfo{
+			Slug:        p.Slug,
+			Title:       p.Title,
+			Date:        p.Date,
+			Tags:        strings.Split(p.Tags, ","),
+			Categories:  strings.Split(p.Categories, ","),
+			Summary:     p.Summary,
+			Views:       p.Views,
+			IsPinned:    p.IsPinned,
+			IsFeatured:  p.IsFeatured,
+			ScheduledAt: p.ScheduledAt,
+		})
+	}
+	return result, nil
+}
+
+// SetPostPin 设置/取消置顶
+func (s *Service) SetPostPin(id uint, pinned bool) error {
+	return s.repo.SetPostPinned(id, pinned)
+}
+
+// SetPostFeature 设置/取消推荐
+func (s *Service) SetPostFeature(id uint, featured bool) error {
+	return s.repo.SetPostFeatured(id, featured)
+}
+
+// SchedulePost 设置定时发布
+func (s *Service) SchedulePost(id uint, scheduledAt time.Time) error {
+	return s.repo.SchedulePost(id, scheduledAt)
+}
+
+// PublishScheduledPosts 发布已到时的定时文章
+func (s *Service) PublishScheduledPosts() (int64, error) {
+	return s.repo.PublishScheduledPosts()
+}
+
+// GetPostByID 根据ID获取文章
+func (s *Service) GetPostByID(id uint) (*PostInfo, error) {
+	post, err := s.repo.GetPostByID(id)
+	if err != nil {
+		return nil, err
+	}
+	return &PostInfo{
+		Slug:        post.Slug,
+		Title:       post.Title,
+		Date:        post.Date,
+		Tags:        strings.Split(post.Tags, ","),
+		Categories:  strings.Split(post.Categories, ","),
+		Summary:     post.Summary,
+		Views:       post.Views,
+		IsPinned:    post.IsPinned,
+		IsFeatured:  post.IsFeatured,
+		ScheduledAt: post.ScheduledAt,
+	}, nil
+}
+
+// TocItem 目录项
+type TocItem struct {
+	Level int    `json:"level"`
+	Text  string `json:"text"`
+	ID    string `json:"id"`
+}
+
+// ExtractTOC 从 markdown HTML 中提取目录
+func (s *Service) ExtractTOC(htmlContent string) []TocItem {
+	var toc []TocItem
+	re := regexp.MustCompile(`<h([1-6])[^>]*id="([^"]+)"[^>]*>([^<]+)</h[1-6]>`)
+	matches := re.FindAllStringSubmatch(htmlContent, -1)
+
+	for _, m := range matches {
+		if len(m) == 4 {
+			level, _ := strconv.Atoi(m[1])
+			toc = append(toc, TocItem{
+				Level: level,
+				ID:    m[2],
+				Text:  strings.TrimSpace(m[3]),
+			})
+		}
+	}
+	return toc
+}
+
+// PostNavigation 文章导航信息
+type PostNavigation struct {
+	Prev *PostNavItem `json:"prev,omitempty"`
+	Next *PostNavItem `json:"next,omitempty"`
+}
+
+// PostNavItem 导航项
+type PostNavItem struct {
+	Slug  string `json:"slug"`
+	Title string `json:"title"`
+}
+
+// CalculateReadingTime 计算阅读时间（分钟）
+// 中文：约400字/分钟，英文：约200词/分钟
+func CalculateReadingTime(content string) int {
+	// 移除 HTML 标签
+	re := regexp.MustCompile(`<[^>]+>`)
+	plainText := re.ReplaceAllString(content, "")
+
+	// 统计中文字符数
+	chineseCount := 0
+	// 统计英文单词数
+	englishWordCount := 0
+
+	runes := []rune(plainText)
+	inEnglish := false
+	englishWord := ""
+
+	for _, r := range runes {
+		if r >= 0x4e00 && r <= 0x9fff {
+			// 中文字符
+			chineseCount++
+			if inEnglish && englishWord != "" {
+				englishWordCount++
+			}
+			inEnglish = false
+			englishWord = ""
+		} else if (r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z') {
+			// 英文字母
+			inEnglish = true
+			englishWord += string(r)
+		} else {
+			if inEnglish && englishWord != "" {
+				englishWordCount++
+			}
+			inEnglish = false
+			englishWord = ""
+		}
+	}
+
+	// 如果末尾是英文，加一次
+	if inEnglish && englishWord != "" {
+		englishWordCount++
+	}
+
+	// 计算总阅读时间（分钟）
+	// 中文速度：400字/分钟，英文速度：200词/分钟
+	chineseTime := float64(chineseCount) / 400.0
+	englishTime := float64(englishWordCount) / 200.0
+
+	totalMinutes := chineseTime + englishTime
+	if totalMinutes < 1 {
+		return 1
+	}
+	return int(totalMinutes)
+}
+
+// GetPostNavigation 获取文章导航（上一篇、下一篇）
+func (s *Service) GetPostNavigation(slug string) (*PostNavigation, error) {
+	post, err := s.repo.GetPostBySlug(slug)
+	if err != nil {
+		return nil, err
+	}
+
+	nav := &PostNavigation{}
+
+	// 获取上一篇
+	prevPost, err := s.repo.GetPrevPost(post.Date, post.Slug)
+	if err == nil && prevPost != nil {
+		nav.Prev = &PostNavItem{
+			Slug:  prevPost.Slug,
+			Title: prevPost.Title,
+		}
+	}
+
+	// 获取下一篇
+	nextPost, err := s.repo.GetNextPost(post.Date, post.Slug)
+	if err == nil && nextPost != nil {
+		nav.Next = &PostNavItem{
+			Slug:  nextPost.Slug,
+			Title: nextPost.Title,
+		}
+	}
+
+	return nav, nil
+}
+
+// ListPopularPosts 获取热门文章
+func (s *Service) ListPopularPosts(limit int) ([]PostInfo, error) {
+	if limit <= 0 {
+		limit = 10
+	}
+	posts, err := s.repo.ListPopularPosts(limit)
+	if err != nil {
+		return nil, err
+	}
+
+	result := make([]PostInfo, 0, len(posts))
+	for _, p := range posts {
+		result = append(result, PostInfo{
+			Slug:        p.Slug,
+			Title:       p.Title,
+			Date:        p.Date,
+			Tags:        strings.Split(p.Tags, ","),
+			Categories:  strings.Split(p.Categories, ","),
+			Summary:     p.Summary,
+			Views:       p.Views,
+			IsPinned:    p.IsPinned,
+			IsFeatured:  p.IsFeatured,
+			ReadingTime: CalculateReadingTime(p.Content),
+		})
+	}
+	return result, nil
+}
+
+// ListRelatedPosts 获取相关文章
+func (s *Service) ListRelatedPosts(slug string, limit int) ([]PostInfo, error) {
+	if limit <= 0 {
+		limit = 5
+	}
+
+	// 获取当前文章
+	currentPost, err := s.repo.GetPostBySlug(slug)
+	if err != nil {
+		return nil, err
+	}
+
+	posts, err := s.repo.ListRelatedPosts(slug, currentPost.Tags, limit)
+	if err != nil {
+		return nil, err
+	}
+
+	result := make([]PostInfo, 0, len(posts))
+	for _, p := range posts {
+		result = append(result, PostInfo{
+			Slug:        p.Slug,
+			Title:       p.Title,
+			Date:        p.Date,
+			Tags:        strings.Split(p.Tags, ","),
+			Categories:  strings.Split(p.Categories, ","),
+			Summary:     p.Summary,
+			Views:       p.Views,
+			IsPinned:    p.IsPinned,
+			IsFeatured:  p.IsFeatured,
+			ReadingTime: CalculateReadingTime(p.Content),
+		})
+	}
+	return result, nil
 }

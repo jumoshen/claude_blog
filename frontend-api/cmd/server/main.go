@@ -69,6 +69,8 @@ func main() {
 	authHandler := handler.NewAuthHandler(svc, cfg, l, jwtUtil)
 	postHandler := handler.NewPostHandler(svc, l)
 	commentHandler := handler.NewCommentHandler(svc, l)
+	categoryHandler := handler.NewCategoryHandler(svc, l)
+	tagHandler := handler.NewTagHandler(svc, l)
 
 	// Setup Gin
 	gin.SetMode(gin.ReleaseMode)
@@ -96,6 +98,12 @@ func main() {
 
 		// Public routes with visit logging
 		v1.GET("/posts", postHandler.ListPosts)
+		v1.GET("/posts/search", postHandler.SearchPosts)
+		v1.GET("/posts/featured", postHandler.ListFeaturedPosts)
+		v1.GET("/posts/popular", postHandler.ListPopularPosts)
+		v1.GET("/posts/:slug/toc", postHandler.GetTOC)
+		v1.GET("/posts/:slug/navigation", postHandler.GetNavigation)
+		v1.GET("/posts/:slug/related", postHandler.ListRelatedPosts)
 		v1.GET("/posts/:slug", postHandler.GetPost)
 		v1.GET("/archives", postHandler.GetArchives)
 		v1.GET("/about", postHandler.GetAbout)
@@ -127,6 +135,27 @@ func main() {
 		admin.Use(middleware.AuthMiddleware(jwtUtil))
 		{
 			admin.POST("/refresh", postHandler.Refresh)
+
+			// Category routes
+			admin.GET("/categories", categoryHandler.ListCategories)
+			admin.GET("/categories/all", categoryHandler.ListAllCategories)
+			admin.GET("/categories/:id", categoryHandler.GetCategory)
+			admin.POST("/categories", categoryHandler.CreateCategory)
+			admin.PUT("/categories/:id", categoryHandler.UpdateCategory)
+			admin.DELETE("/categories/:id", categoryHandler.DeleteCategory)
+
+			// Tag routes
+			admin.GET("/tags", tagHandler.ListTags)
+			admin.GET("/tags/all", tagHandler.ListAllTags)
+			admin.GET("/tags/:id", tagHandler.GetTag)
+			admin.POST("/tags", tagHandler.CreateTag)
+			admin.PUT("/tags/:id", tagHandler.UpdateTag)
+			admin.DELETE("/tags/:id", tagHandler.DeleteTag)
+
+			// Post pin/feature routes
+			admin.PUT("/posts/:id/pin", postHandler.SetPostPin)
+			admin.PUT("/posts/:id/feature", postHandler.SetPostFeature)
+			admin.POST("/posts/:id/schedule", postHandler.SchedulePost)
 		}
 	}
 

@@ -15,10 +15,12 @@ import (
 	"unicode/utf8"
 
 	"github.com/go-redis/redis/v8"
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/yuin/goldmark"
 	"github.com/yuin/goldmark/extension"
 	"github.com/yuin/goldmark/parser"
 	"github.com/yuin/goldmark/renderer/html"
+	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
 
 	"markdown-blog/internal/config"
@@ -1074,6 +1076,216 @@ func (s *Service) ListRelatedPosts(slug string, limit int) ([]PostInfo, error) {
 	}
 
 	posts, err := s.repo.ListRelatedPosts(slug, currentPost.Tags, limit)
+	if err != nil {
+		return nil, err
+	}
+
+	result := make([]PostInfo, 0, len(posts))
+	for _, p := range posts {
+		result = append(result, PostInfo{
+			Slug:        p.Slug,
+			Title:       p.Title,
+			Date:        p.Date,
+			Tags:        strings.Split(p.Tags, ","),
+			Categories:  strings.Split(p.Categories, ","),
+			Summary:     p.Summary,
+			Views:       p.Views,
+			IsPinned:    p.IsPinned,
+			IsFeatured:  p.IsFeatured,
+			ReadingTime: CalculateReadingTime(p.Content),
+		})
+	}
+	return result, nil
+}
+
+// BlogUserInfo 博客用户信息
+type BlogUserInfo struct {
+	ID       uint   `json:"id"`
+	Username string `json:"username"`
+	Email    string `json:"email"`
+	Nickname string `json:"nickname"`
+	Avatar   string `json:"avatar"`
+}
+
+// RegisterBlogUser 注册博客用户
+func (s *Service) RegisterBlogUser(username, email, password string) (*BlogUserInfo, error) {
+	// 检查用户名是否存在
+	if _, err := s.repo.GetBlogUserByUsername(username); err == nil {
+		return nil, fmt.Errorf("用户名已存在")
+	}
+
+	// 检查邮箱是否存在
+	if _, err := s.repo.GetBlogUserByEmail(email); err == nil {
+		return nil, fmt.Errorf("邮箱已被注册")
+	}
+
+	// 密码哈希
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+	if err != nil {
+		return nil, fmt.Errorf("密码加密失败")
+	}
+
+	user := &model.BlogUser{
+		Username:     username,
+		Email:       email,
+		PasswordHash: string(hashedPassword),
+		Nickname:    username,
+	}
+
+	if err := s.repo.CreateBlogUser(user); err != nil {
+		return nil, err
+	}
+
+	return &BlogUserInfo{
+		ID:       user.ID,
+		Username: user.Username,
+		Email:    user.Email,
+		Nickname: user.Nickname,
+		Avatar:   user.AvatarURL,
+	}, nil
+}
+
+// LoginBlogUser 登录博客用户
+func (s *Service) LoginBlogUser(username, password string) (*BlogUserInfo, string, error) {
+	user, err := s.repo.GetBlogUserByUsername(username)
+	if err != nil {
+		return nil, "", fmt.Errorf("用户名或密码错误")
+	}
+
+	// 验证密码
+	if err := bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(password)); err != nil {
+		return nil, "", fmt.Errorf("用户名或密码错误")
+	}
+
+	// 检查用户状态
+	if user.Status != 1 {
+		return nil, "", fmt.Errorf("用户已被禁用")
+	}
+
+	// 生成 JWT token
+	token, err := s.generateBlogUserToken(user)
+	if err != nil {
+		return nil, "", fmt.Errorf("生成token失败")
+	}
+
+	return &BlogUserInfo{
+		ID:       user.ID,
+		Username: user.Username,
+		Email:    user.Email,
+		Nickname: user.Nickname,
+		Avatar:   user.AvatarURL,
+	}, token, nil
+}
+
+// generateBlogUserToken 生成博客用户 JWT token
+func (s *Service) generateBlogUserToken(user *model.BlogUser) (string, error) {
+	now := time.Now()
+	claims := jwt.MapClaims{
+		"user_id":  user.ID,
+		"username": user.Username,
+		"email":    user.Email,
+		"exp":      now.Add(time.Duration(s.cfg.JWT.Expiration) * time.Second).Unix(),
+		"iat":      now.Unix(),
+		"iss":      s.cfg.JWT.Issuer,
+	}
+
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	return token.SignedString([]byte(s.cfg.JWT.Secret))
+}
+
+// GetBlogUserByID 根据ID获取用户
+func (s *Service) GetBlogUserByID(id uint) (*BlogUserInfo, error) {
+	user, err := s.repo.GetBlogUserByID(id)
+	if err != nil {
+		return nil, err
+	}
+	return &BlogUserInfo{
+		ID:       user.ID,
+		Username: user.Username,
+		Email:    user.Email,
+		Nickname: user.Nickname,
+		Avatar:   user.AvatarURL,
+	}, nil
+}
+
+// LikePost 点赞/取消点赞文章
+func (s *Service) LikePost(postSlug string, userID uint) (bool, int64, error) {
+	// 获取文章
+	post, err := s.repo.GetPostBySlug(postSlug)
+	if err != nil {
+		return false, 0, err
+	}
+
+	// 检查是否已点赞
+	like, err := s.repo.GetPostLike(post.ID, userID)
+	if err != nil {
+		return false, 0, err
+	}
+
+	liked := true
+	if like != nil {
+		// 已点赞，取消
+		if err := s.repo.RemovePostLike(post.ID, userID); err != nil {
+			return false, 0, err
+		}
+		liked = false
+	} else {
+		// 未点赞，添加
+		if err := s.repo.AddPostLike(post.ID, userID); err != nil {
+			return false, 0, err
+		}
+		liked = true
+	}
+
+	// 获取最新点赞数
+	count, err := s.repo.CountPostLikes(post.ID)
+	if err != nil {
+		return liked, 0, err
+	}
+
+	return liked, count, nil
+}
+
+// GetPostLikeCount 获取文章点赞数
+func (s *Service) GetPostLikeCount(postSlug string) (int64, error) {
+	post, err := s.repo.GetPostBySlug(postSlug)
+	if err != nil {
+		return 0, err
+	}
+	return s.repo.CountPostLikes(post.ID)
+}
+
+// FavoritePost 收藏/取消收藏文章
+func (s *Service) FavoritePost(postSlug string, userID uint) (bool, error) {
+	post, err := s.repo.GetPostBySlug(postSlug)
+	if err != nil {
+		return false, err
+	}
+
+	fav, err := s.repo.GetPostFavorite(post.ID, userID)
+	if err != nil {
+		return false, err
+	}
+
+	favorited := true
+	if fav != nil {
+		if err := s.repo.RemovePostFavorite(post.ID, userID); err != nil {
+			return false, err
+		}
+		favorited = false
+	} else {
+		if err := s.repo.AddPostFavorite(post.ID, userID); err != nil {
+			return false, err
+		}
+		favorited = true
+	}
+
+	return favorited, nil
+}
+
+// ListMyFavorites 获取我的收藏列表
+func (s *Service) ListMyFavorites(userID uint) ([]PostInfo, error) {
+	posts, err := s.repo.ListUserFavorites(userID)
 	if err != nil {
 		return nil, err
 	}

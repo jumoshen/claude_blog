@@ -588,3 +588,106 @@ func (r *Repository) ListRelatedPosts(currentSlug string, tags string, limit int
 	}
 	return posts, nil
 }
+
+// User operations for C端用户
+func (r *Repository) CreateBlogUser(user *model.BlogUser) error {
+	return r.db.Create(user).Error
+}
+
+func (r *Repository) GetBlogUserByUsername(username string) (*model.BlogUser, error) {
+	var user model.BlogUser
+	if err := r.db.Where("username = ?", username).First(&user).Error; err != nil {
+		return nil, err
+	}
+	return &user, nil
+}
+
+func (r *Repository) GetBlogUserByEmail(email string) (*model.BlogUser, error) {
+	var user model.BlogUser
+	if err := r.db.Where("email = ?", email).First(&user).Error; err != nil {
+		return nil, err
+	}
+	return &user, nil
+}
+
+func (r *Repository) GetBlogUserByID(id uint) (*model.BlogUser, error) {
+	var user model.BlogUser
+	if err := r.db.First(&user, id).Error; err != nil {
+		return nil, err
+	}
+	return &user, nil
+}
+
+// PostLike operations
+func (r *Repository) AddPostLike(postID, userID uint) error {
+	like := &model.PostLike{
+		PostID: postID,
+		UserID: userID,
+	}
+	return r.db.Create(like).Error
+}
+
+func (r *Repository) RemovePostLike(postID, userID uint) error {
+	return r.db.Where("post_id = ? AND user_id = ?", postID, userID).Delete(&model.PostLike{}).Error
+}
+
+func (r *Repository) GetPostLike(postID, userID uint) (*model.PostLike, error) {
+	var like model.PostLike
+	err := r.db.Where("post_id = ? AND user_id = ?", postID, userID).First(&like).Error
+	if err == gorm.ErrRecordNotFound {
+		return nil, nil
+	}
+	return &like, err
+}
+
+func (r *Repository) CountPostLikes(postID uint) (int64, error) {
+	var count int64
+	if err := r.db.Model(&model.PostLike{}).Where("post_id = ?", postID).Count(&count).Error; err != nil {
+		return 0, err
+	}
+	return count, nil
+}
+
+// PostFavorite operations
+func (r *Repository) AddPostFavorite(postID, userID uint) error {
+	fav := &model.PostFavorite{
+		PostID: postID,
+		UserID: userID,
+	}
+	return r.db.Create(fav).Error
+}
+
+func (r *Repository) RemovePostFavorite(postID, userID uint) error {
+	return r.db.Where("post_id = ? AND user_id = ?", postID, userID).Delete(&model.PostFavorite{}).Error
+}
+
+func (r *Repository) GetPostFavorite(postID, userID uint) (*model.PostFavorite, error) {
+	var fav model.PostFavorite
+	err := r.db.Where("post_id = ? AND user_id = ?", postID, userID).First(&fav).Error
+	if err == gorm.ErrRecordNotFound {
+		return nil, nil
+	}
+	return &fav, err
+}
+
+func (r *Repository) ListUserFavorites(userID uint) ([]model.Post, error) {
+	var favorites []model.PostFavorite
+	if err := r.db.Where("user_id = ?", userID).Order("created_at DESC").Find(&favorites).Error; err != nil {
+		return nil, err
+	}
+
+	var postIDs []uint
+	for _, f := range favorites {
+		postIDs = append(postIDs, f.PostID)
+	}
+
+	if len(postIDs) == 0 {
+		return []model.Post{}, nil
+	}
+
+	var posts []model.Post
+	if err := r.db.Where("id IN ? AND status = 1", postIDs).Find(&posts).Error; err != nil {
+		return nil, err
+	}
+	return posts, nil
+}

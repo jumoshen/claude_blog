@@ -426,6 +426,111 @@ func (h *PostHandler) ListRelatedPosts(c *gin.Context) {
 	response.Success(c, posts)
 }
 
+// LikePost 点赞/取消点赞文章
+// @Summary Like or unlike a post
+// @Description Toggle like status of a post
+// @Tags posts
+// @Security BearerAuth
+// @Produce json
+// @Param slug path string true "Post slug"
+// @Success 200 {object} response.Response
+// @Router /api/v1/posts/{slug}/like [post]
+func (h *PostHandler) LikePost(c *gin.Context) {
+	slug := c.Param("slug")
+
+	// 获取登录用户ID
+	userID, exists := c.Get("user_id")
+	if !exists {
+		response.Unauthorized(c, "Please login first")
+		return
+	}
+
+	liked, count, err := h.svc.LikePost(slug, userID.(uint))
+	if err != nil {
+		h.log.Error("Failed to like post: %v", err)
+		response.InternalError(c, "Failed to like post")
+		return
+	}
+
+	response.Success(c, gin.H{
+		"liked": liked,
+		"count": count,
+	})
+}
+
+// GetPostLikes 获取文章点赞数
+// @Summary Get post like count
+// @Description Returns the like count of a post
+// @Tags posts
+// @Produce json
+// @Param slug path string true "Post slug"
+// @Success 200 {object} response.Response
+// @Router /api/v1/posts/{slug}/likes [get]
+func (h *PostHandler) GetPostLikes(c *gin.Context) {
+	slug := c.Param("slug")
+
+	count, err := h.svc.GetPostLikeCount(slug)
+	if err != nil {
+		response.NotFound(c, "Post not found")
+		return
+	}
+
+	response.Success(c, gin.H{"count": count})
+}
+
+// FavoritePost 收藏/取消收藏文章
+// @Summary Favorite or unfavorite a post
+// @Description Toggle favorite status of a post
+// @Tags posts
+// @Security BearerAuth
+// @Produce json
+// @Param slug path string true "Post slug"
+// @Success 200 {object} response.Response
+// @Router /api/v1/posts/{slug}/favorite [post]
+func (h *PostHandler) FavoritePost(c *gin.Context) {
+	slug := c.Param("slug")
+
+	userID, exists := c.Get("user_id")
+	if !exists {
+		response.Unauthorized(c, "Please login first")
+		return
+	}
+
+	favorited, err := h.svc.FavoritePost(slug, userID.(uint))
+	if err != nil {
+		h.log.Error("Failed to favorite post: %v", err)
+		response.InternalError(c, "Failed to favorite post")
+		return
+	}
+
+	response.Success(c, gin.H{"favorited": favorited})
+}
+
+// ListMyFavorites 获取我的收藏列表
+// @Summary Get my favorites
+// @Description Returns the current user's favorite posts
+// @Tags users
+// @Security BearerAuth
+// @Produce json
+// @Success 200 {object} response.Response
+// @Router /api/v1/users/me/favorites [get]
+func (h *PostHandler) ListMyFavorites(c *gin.Context) {
+	userID, exists := c.Get("user_id")
+	if !exists {
+		response.Unauthorized(c, "Please login first")
+		return
+	}
+
+	posts, err := h.svc.ListMyFavorites(userID.(uint))
+	if err != nil {
+		h.log.Error("Failed to list favorites: %v", err)
+		response.InternalError(c, "Failed to load favorites")
+		return
+	}
+
+	response.Success(c, posts)
+}
+
 // GetSitemap generates XML sitemap
 // @Summary Get sitemap
 // @Description Returns XML sitemap for SEO
@@ -468,6 +573,54 @@ func (h *PostHandler) GetSitemap(c *gin.Context) {
 	xml += `</urlset>`
 
 	c.Header("Content-Type", "application/xml")
+	c.String(200, xml)
+}
+
+// GetRSS generates RSS feed
+// @Summary Get RSS feed
+// @Description Returns RSS 2.0 feed
+// @Tags posts
+// @Produce xml
+// @Success 200 {string} string
+// @Router /api/v1/feed.xml [get]
+func (h *PostHandler) GetRSS(c *gin.Context) {
+	posts, err := h.svc.GetAllPostsForSitemap()
+	if err != nil {
+		h.log.Error("Failed to get posts for RSS: %v", err)
+		response.InternalError(c, "Failed to generate RSS")
+		return
+	}
+
+	baseURL := "https://jumoshen.cn"
+	siteTitle := "Jumoshen"
+	siteDescription := "巨魔深博客"
+
+	var xml string
+	xml = `<?xml version="1.0" encoding="UTF-8"?>`
+	xml += `<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">`
+	xml += `<channel>`
+	xml += `<title>` + siteTitle + `</title>`
+	xml += `<description>` + siteDescription + `</description>`
+	xml += `<link>` + baseURL + `</link>`
+	xml += `<atom:link href="` + baseURL + `/api/v1/feed.xml" rel="self" type="application/rss+xml"/>`
+	xml += `<language>zh-CN</language>`
+
+	for _, post := range posts {
+		xml += `<item>`
+		xml += `<title><![CDATA[` + post.Title + `]]></title>`
+		xml += `<link>` + baseURL + `/post/` + post.Slug + `</link>`
+		xml += `<guid isPermaLink="true">` + baseURL + `/post/` + post.Slug + `</guid>`
+		xml += `<pubDate>` + post.Date.Format(time.RFC1123) + `</pubDate>`
+		if post.Summary != "" {
+			xml += `<description><![CDATA[` + post.Summary + `]]></description>`
+		}
+		xml += `</item>`
+	}
+
+	xml += `</channel>`
+	xml += `</rss>`
+
+	c.Header("Content-Type", "application/xml; charset=utf-8")
 	c.String(200, xml)
 }
 

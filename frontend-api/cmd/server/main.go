@@ -71,6 +71,7 @@ func main() {
 	commentHandler := handler.NewCommentHandler(svc, l)
 	categoryHandler := handler.NewCategoryHandler(svc, l)
 	tagHandler := handler.NewTagHandler(svc, l)
+	userHandler := handler.NewUserHandler(svc, l)
 
 	// Setup Gin
 	gin.SetMode(gin.ReleaseMode)
@@ -104,12 +105,23 @@ func main() {
 		v1.GET("/posts/:slug/toc", postHandler.GetTOC)
 		v1.GET("/posts/:slug/navigation", postHandler.GetNavigation)
 		v1.GET("/posts/:slug/related", postHandler.ListRelatedPosts)
+		v1.GET("/posts/:slug/likes", postHandler.GetPostLikes)
+		v1.POST("/posts/:slug/like", middleware.AuthMiddleware(jwtUtil), postHandler.LikePost)
+		v1.POST("/posts/:slug/favorite", middleware.AuthMiddleware(jwtUtil), postHandler.FavoritePost)
 		v1.GET("/posts/:slug", postHandler.GetPost)
+
+		// User routes
+		users := v1.Group("/users")
+		users.Use(middleware.AuthMiddleware(jwtUtil))
+		{
+			users.GET("/me/favorites", postHandler.ListMyFavorites)
+		}
 		v1.GET("/archives", postHandler.GetArchives)
 		v1.GET("/about", postHandler.GetAbout)
 		v1.GET("/tags", postHandler.GetTags)
 		v1.GET("/categories", postHandler.GetCategories)
 		v1.GET("/sitemap.xml", postHandler.GetSitemap)
+		v1.GET("/feed.xml", postHandler.GetRSS)
 
 		// Auth routes
 		auth := v1.Group("/auth")
@@ -118,6 +130,11 @@ func main() {
 			auth.GET("/callback", authHandler.Callback)
 			auth.POST("/logout", middleware.AuthMiddleware(jwtUtil), authHandler.Logout)
 			auth.GET("/me", middleware.AuthMiddleware(jwtUtil), authHandler.Me)
+
+			// Blog user auth routes (C端)
+			auth.POST("/register", userHandler.Register)
+			auth.POST("/login", userHandler.Login)
+			auth.GET("/me", userHandler.Me)
 		}
 
 		// Comment routes

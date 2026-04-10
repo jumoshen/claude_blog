@@ -84,3 +84,33 @@ type PostTag struct {
 	TagID     uint      `gorm:"not null;comment:标签ID;index:idx_tag_id"`
 	CreatedAt time.Time `gorm:"autoCreateTime"`
 }
+
+// BlogUser 博客用户表（C端用户）
+type BlogUser struct {
+	ID           uint           `gorm:"primaryKey"`
+	Username     string         `gorm:"size:50;not null;uniqueIndex;comment:用户名"`
+	Email        string         `gorm:"size:100;not null;uniqueIndex;comment:邮箱"`
+	PasswordHash string         `gorm:"size:255;not null;comment:密码哈希"`
+	Nickname     string         `gorm:"size:50;default:'';comment:昵称"`
+	AvatarURL    string         `gorm:"size:500;default:'';comment:头像"`
+	Status       int            `gorm:"default:1;comment:状态 1=正常 0=禁用"`
+	CreatedAt    time.Time
+	UpdatedAt    time.Time
+	DeletedAt    gorm.DeletedAt `gorm:"index"`
+}
+
+// PostLike 文章点赞表
+type PostLike struct {
+	ID        uint      `gorm:"primaryKey"`
+	PostID    uint      `gorm:"not null;uniqueIndex:uk_post_user;comment:文章ID"`
+	UserID    uint      `gorm:"not null;uniqueIndex:uk_post_user;comment:用户ID"`
+	CreatedAt time.Time `gorm:"autoCreateTime"`
+}
+
+// PostFavorite 文章收藏表
+type PostFavorite struct {
+	ID        uint      `gorm:"primaryKey"`
+	PostID    uint      `gorm:"not null;uniqueIndex:uk_post_user;comment:文章ID"`
+	UserID    uint      `gorm:"not null;uniqueIndex:uk_post_user;comment:用户ID"`
+	CreatedAt time.Time `gorm:"autoCreateTime"`
+}

@@ -129,8 +129,7 @@ services:
 
 networks:
   blogdeploy_blog-network:
-    name: blogdeploy_blog-network
-    external: true
+    driver: bridge
 
 volumes:
   mysql_data:

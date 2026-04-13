@@ -91,7 +91,7 @@ services:
       - APP_ENV=production
       - GOPROXY=https://goproxy.cn,direct
     volumes:
-      - ./config-admin.yaml:/app/config.yaml
+      - ./deploy/config-admin.yaml:/app/config.yaml:ro
     depends_on:
       - mysql
       - minio

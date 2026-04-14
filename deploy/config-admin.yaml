@@ -15,6 +15,7 @@ jwt:
   expire_hours: 24
 
 minio:
+  enabled: true
   endpoint: cc-blog-minio:9000
   access_key: blogadmin
   secret_key: "BlogMinIO2024"
@@ -28,3 +29,15 @@ ai:
   api_key: "sk-api-Gwf-CCjsJIH2IsLdYokm_oBnbQ05OeWuLB-_MNEXneTN94cUA-XWtkpwGtYpctrhl-zbbZgHJzJY8sD17RB_aME2JTMray1J3C9a6uK5wc_xRy4AeTrKG98"
   model: "MiniMax-M2.7-highspeed"
   max_tokens: 4096
+
+log:
+  level: info
+  path: /var/log/blog-admin
+  filename: app.log
+  max_size: 100
+  max_backups: 30
+  max_age: 7
+  compress: true
+  enable_console: false
+  enable_file: true
+  enable_sql: true

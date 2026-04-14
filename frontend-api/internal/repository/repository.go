@@ -114,7 +114,7 @@ func (r *Repository) ListPostsPaginated(tag string, category string, page, pageS
 
 	// Get paginated results
 	offset := (page - 1) * pageSize
-	if err := query.Order("date desc").Offset(offset).Limit(pageSize).Find(&posts).Error; err != nil {
+	if err := query.Order("is_pinned DESC, date desc").Offset(offset).Limit(pageSize).Find(&posts).Error; err != nil {
 		return nil, 0, err
 	}
 

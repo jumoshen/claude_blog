@@ -4,6 +4,7 @@
 
     <div class="card-header">
       <h2 class="title">{{ post.title }}</h2>
+      <span v-if="post.is_pinned" class="pin-badge">置顶</span>
       <div class="reading-time" v-if="readingTime">
         <span class="clock">⏱️</span> {{ readingTime }}
       </div>
@@ -119,8 +120,10 @@ const formatDate = (date) => {
 .card-header {
   display: flex;
   justify-content: space-between;
-  align-items: flex-start;
+  align-items: center;
   margin-bottom: 12px;
+  flex-wrap: wrap;
+  gap: 8px;
 }
 
 .title {
@@ -128,13 +131,25 @@ const formatDate = (date) => {
   color: var(--text-h);
   font-size: 20px;
   font-weight: 600;
-  flex: 1;
   line-height: 1.4;
   transition: color 0.2s;
+  flex: 1;
+  min-width: 0;
 }
 
 .post-card:hover .title {
   color: var(--accent);
+}
+
+.pin-badge {
+  background: var(--accent);
+  color: #fff;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 500;
+  margin-left: 8px;
+  flex-shrink: 0;
 }
 
 .reading-time {

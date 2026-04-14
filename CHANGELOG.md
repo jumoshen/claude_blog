@@ -1,5 +1,33 @@
 # 更新日志
 
+## v1.6.0 (2026-04-14)
+
+### 文章置顶和定时发布功能
+
+- [x] B端新增文章置顶/取消置顶功能 (`POST /api/admin/articles/:id/pin`, `POST /api/admin/articles/:id/unpin`)
+- [x] B端新增定时发布功能 (`POST /api/admin/articles/:id/schedule`)
+- [x] 定时任务调度器 - 每分钟检查待发布文章，自动发布
+- [x] C端文章列表按置顶状态和日期排序，置顶文章优先显示
+- [x] C端文章卡片显示置顶标签
+
+### 日志系统升级
+
+- [x] 统一日志格式 - JSON 结构化输出
+- [x] 文件轮转 - 支持分卷、日志级别、最大文件数等配置
+- [x] 请求日志中间件 - 记录所有请求的 method、url、status、duration、client_ip
+- [x] POST 请求响应日志 - 返回 JSON body（字段超长自动截断）
+- [x] SQL 日志 - 可开关的数据库操作日志
+- [x] 移除 AutoMigrate - 避免启动时的冗余查询
+
+### 部署优化
+
+- [x] GitHub Actions 构建 + GitHub Container Registry 托管镜像
+- [x] 服务器不再存储源码，只保留部署配置文件
+- [x] deploy-all.sh 优化 - 只拉取 deploy/ 目录配置
+- [x] 修复 docker-compose.yml 挂载路径问题
+
+---
+
 ## v1.5.0 (2026-04-09)
 
 ### 镜像构建优化

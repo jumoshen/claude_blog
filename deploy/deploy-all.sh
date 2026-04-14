@@ -49,15 +49,14 @@ main() {
 
     # Step 2: 复制配置文件 (从 deploy 目录)
     log_step "2. 配置服务..."
+    # 创建必要目录
+    ssh_cmd "mkdir -p $SERVER_DEPLOY_PATH/frontend-api"
     # 复制 docker-compose.yml (使用 deploy 目录的生产配置)
     log "   复制 docker-compose.yml..."
     ssh_cmd "cp $SERVER_DEPLOY_PATH/deploy/docker-compose.yml $SERVER_DEPLOY_PATH/docker-compose.yml"
     # C端 API 配置
     log "   配置 C端 API..."
     ssh_cmd "cp $SERVER_DEPLOY_PATH/deploy/config-api.yaml $SERVER_DEPLOY_PATH/frontend-api/config.yaml"
-    # B端 Backend 配置
-    log "   配置 B端 Backend..."
-    ssh_cmd "cp $SERVER_DEPLOY_PATH/deploy/config-admin.yaml $SERVER_DEPLOY_PATH/claude-blog-admin/blog-admin-backend/config.yaml"
     # Nginx 配置
     log "   配置 Nginx..."
     ssh_cmd "cp $SERVER_DEPLOY_PATH/deploy/nginx.conf $SERVER_DEPLOY_PATH/nginx.conf"

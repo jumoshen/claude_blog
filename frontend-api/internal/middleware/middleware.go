@@ -16,12 +16,7 @@ const (
 	UserContextKey     = "user"
 )
 
-// PermissionGetter defines the interface for getting user permissions
-type PermissionGetter interface {
-	GetAdminUserPermissions(userID int64) ([]string, error)
-}
-
-func AuthMiddleware(jwtUtil *jwt.JWT, permissionGetter PermissionGetter) gin.HandlerFunc {
+func AuthMiddleware(jwtUtil *jwt.JWT) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		authHeader := c.GetHeader(AuthorizationHeader)
 		if authHeader == "" {
@@ -46,15 +41,6 @@ func AuthMiddleware(jwtUtil *jwt.JWT, permissionGetter PermissionGetter) gin.Han
 
 		// Store user info in context
 		c.Set(UserContextKey, claims)
-
-		// Load user permissions from database
-		if permissionGetter != nil {
-			perms, err := permissionGetter.GetAdminUserPermissions(claims.UserID)
-			if err == nil {
-				c.Set("permissions", perms)
-			}
-		}
-
 		c.Next()
 	}
 }

@@ -73,7 +73,6 @@ func main() {
 	tagHandler := handler.NewTagHandler(svc, l)
 	userHandler := handler.NewUserHandler(svc, l)
 	adminHandler := handler.NewAdminHandler(svc, l)
-	roleHandler := handler.NewRoleHandler(svc, l)
 
 	// Setup Gin
 	gin.SetMode(gin.ReleaseMode)
@@ -108,15 +107,15 @@ func main() {
 		v1.GET("/posts/:slug/navigation", postHandler.GetNavigation)
 		v1.GET("/posts/:slug/related", postHandler.ListRelatedPosts)
 		v1.GET("/posts/:slug/likes", postHandler.GetPostLikes)
-		v1.POST("/posts/:slug/like", middleware.AuthMiddleware(jwtUtil, repo), postHandler.LikePost)
-		v1.POST("/posts/:slug/favorite", middleware.AuthMiddleware(jwtUtil, repo), postHandler.FavoritePost)
+		v1.POST("/posts/:slug/like", middleware.AuthMiddleware(jwtUtil), postHandler.LikePost)
+		v1.POST("/posts/:slug/favorite", middleware.AuthMiddleware(jwtUtil), postHandler.FavoritePost)
 		v1.GET("/posts/:slug/check", postHandler.CheckPassword)
 		v1.POST("/posts/:slug/verify", postHandler.VerifyPassword)
 		v1.GET("/posts/:slug", postHandler.GetPost)
 
 		// User routes
 		users := v1.Group("/users")
-		users.Use(middleware.AuthMiddleware(jwtUtil, repo))
+		users.Use(middleware.AuthMiddleware(jwtUtil))
 		{
 			users.GET("/me/favorites", postHandler.ListMyFavorites)
 		}
@@ -132,8 +131,8 @@ func main() {
 		{
 			auth.GET("/login", authHandler.LoginInfo)
 			auth.GET("/callback", authHandler.Callback)
-			auth.POST("/logout", middleware.AuthMiddleware(jwtUtil, repo), authHandler.Logout)
-			auth.GET("/me", middleware.AuthMiddleware(jwtUtil, repo), authHandler.Me)
+			auth.POST("/logout", middleware.AuthMiddleware(jwtUtil), authHandler.Logout)
+			auth.GET("/me", middleware.AuthMiddleware(jwtUtil), authHandler.Me)
 
 			// Blog user auth routes (C端)
 			auth.POST("/register", userHandler.Register)
@@ -143,7 +142,7 @@ func main() {
 		// Blog user routes (C端)
 		blogUsers := v1.Group("/blogusers")
 		{
-			blogUsers.GET("/me", middleware.AuthMiddleware(jwtUtil, repo), userHandler.Me)
+			blogUsers.GET("/me", middleware.AuthMiddleware(jwtUtil), userHandler.Me)
 		}
 
 		// Comment routes
@@ -158,7 +157,7 @@ func main() {
 
 		// Admin routes (protected)
 		admin := v1.Group("/admin")
-		admin.Use(middleware.AuthMiddleware(jwtUtil, repo))
+		admin.Use(middleware.AuthMiddleware(jwtUtil))
 		{
 			admin.POST("/refresh", postHandler.Refresh)
 
@@ -186,13 +185,6 @@ func main() {
 
 			// Admin log routes
 			admin.GET("/logs", adminHandler.ListAdminLogs)
-
-			// Role routes
-			admin.GET("/roles", roleHandler.ListRoles)
-			admin.GET("/roles/:id", roleHandler.GetRole)
-			admin.POST("/roles", roleHandler.CreateRole)
-			admin.PUT("/roles/:id", roleHandler.UpdateRole)
-			admin.DELETE("/roles/:id", roleHandler.DeleteRole)
 		}
 	}
 

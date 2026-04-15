@@ -18,11 +18,12 @@ type JWT struct {
 }
 
 type Claims struct {
-	UserID    int64  `json:"user_id"`
-	Login     string `json:"login"`
-	Name      string `json:"name"`
-	AvatarURL string `json:"avatar_url"`
-	Email     string `json:"email"`
+	UserID      int64    `json:"user_id"`
+	Login       string   `json:"login"`
+	Name        string   `json:"name"`
+	AvatarURL   string   `json:"avatar_url"`
+	Email       string   `json:"email"`
+	Permissions []string `json:"permissions"`
 	jwt.RegisteredClaims
 }
 

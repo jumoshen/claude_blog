@@ -1403,3 +1403,28 @@ func (s *Service) ListAdminLogs(page, pageSize int) ([]AdminLogInfo, int64, erro
 	}
 	return result, total, nil
 }
+
+// ListRoles 获取所有角色
+func (s *Service) ListRoles() ([]repository.RoleInfo, error) {
+	return s.repo.ListRoles()
+}
+
+// GetRole 获取角色
+func (s *Service) GetRole(id uint) (*repository.RoleInfo, error) {
+	return s.repo.GetRoleByID(id)
+}
+
+// CreateRole 创建角色
+func (s *Service) CreateRole(name string, permissions []string) (*repository.RoleInfo, error) {
+	return s.repo.CreateRole(name, permissions)
+}
+
+// UpdateRole 更新角色
+func (s *Service) UpdateRole(id uint, name string, permissions []string) (*repository.RoleInfo, error) {
+	return s.repo.UpdateRole(id, name, permissions)
+}
+
+// DeleteRole 删除角色
+func (s *Service) DeleteRole(id uint) error {
+	return s.repo.DeleteRole(id)
+}

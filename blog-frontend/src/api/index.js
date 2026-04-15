@@ -64,6 +64,10 @@ export default {
   favoritePost: (slug) => api.post(`/posts/${slug}/favorite`),
   getMyFavorites: () => api.get('/users/me/favorites'),
 
+  // Post Password
+  checkPostPassword: (slug) => api.get(`/posts/${slug}/check`),
+  verifyPostPassword: (slug, password) => api.post(`/posts/${slug}/verify`, { password }),
+
   // Admin
   refresh: () => api.post('/admin/refresh'),
 }

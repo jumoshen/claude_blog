@@ -1,7 +1,28 @@
 <template>
   <div class="post-view" v-if="post">
+    <!-- Password Protection -->
+    <div v-if="needsPassword" class="password-overlay">
+      <div class="password-card">
+        <h2>这篇文章受密码保护</h2>
+        <p>请输入密码来查看文章内容</p>
+        <div class="password-input-wrapper">
+          <input
+            v-model="passwordInput"
+            type="password"
+            placeholder="输入密码..."
+            class="password-input"
+            @keydown.enter="verifyPassword"
+          />
+          <button class="password-btn" @click="verifyPassword" :disabled="verifying">
+            {{ verifying ? '验证中...' : '确认' }}
+          </button>
+        </div>
+        <p v-if="passwordError" class="password-error">{{ passwordError }}</p>
+      </div>
+    </div>
+
     <!-- Main Content -->
-    <div class="main-wrapper">
+    <div class="main-wrapper" v-else>
       <article class="post-content">
         <h1 class="title">{{ post.title }}</h1>
         <div class="meta">
@@ -209,6 +230,64 @@ const relatedPosts = ref([])
 const isLiked = ref(false)
 const isFavorited = ref(false)
 const likeCount = ref(0)
+
+// Password protection
+const needsPassword = ref(false)
+const passwordInput = ref('')
+const verifying = ref(false)
+const passwordError = ref('')
+
+// Check if post needs password and if already verified
+const checkPostPassword = async (slug) => {
+  try {
+    const res = await api.checkPostPassword(slug)
+    if (res.code === 0 && res.data.protected) {
+      // Check localStorage for verified status
+      const verifiedKey = `post_verified_${slug}`
+      const verifiedTime = localStorage.getItem(verifiedKey)
+      if (verifiedTime) {
+        const elapsed = Date.now() - parseInt(verifiedTime)
+        if (elapsed < 24 * 60 * 60 * 1000) {
+          // Already verified within 24 hours
+          needsPassword.value = false
+          return
+        }
+      }
+      needsPassword.value = true
+    } else {
+      needsPassword.value = false
+    }
+  } catch (e) {
+    console.error('Failed to check password:', e)
+    needsPassword.value = false
+  }
+}
+
+// Verify post password
+const verifyPassword = async () => {
+  if (!passwordInput.value || verifying.value) return
+
+  verifying.value = true
+  passwordError.value = ''
+
+  try {
+    const res = await api.verifyPostPassword(route.params.slug, passwordInput.value)
+    if (res.code === 0) {
+      // Store verification in localStorage
+      const verifiedKey = `post_verified_${route.params.slug}`
+      localStorage.setItem(verifiedKey, Date.now().toString())
+      needsPassword.value = false
+      passwordInput.value = ''
+    } else {
+      passwordError.value = res.message || '密码错误'
+    }
+  } catch (e) {
+    console.error('Failed to verify password:', e)
+    passwordError.value = '验证失败，请稍后重试'
+  } finally {
+    verifying.value = false
+  }
+}
 
 // 阅读时间计算 (字数/200字每分钟)
 const readingTime = computed(() => {
@@ -438,8 +517,11 @@ onMounted(async () => {
   await fetchPost()
   const slug = route.params.slug
   if (slug) {
-    await fetchComments(slug)
-    connectWebSocket(slug)
+    await checkPostPassword(slug)
+    if (!needsPassword.value) {
+      await fetchComments(slug)
+      connectWebSocket(slug)
+    }
   }
   // Listen for keyboard navigation events
   window.addEventListener('keyboard-nav', handleKeyboardNav)
@@ -456,8 +538,11 @@ watch(() => route.params.slug, async (newSlug) => {
   clearDanmus()
   if (newSlug) {
     await fetchPost()
-    await fetchComments(newSlug)
-    connectWebSocket(newSlug)
+    await checkPostPassword(newSlug)
+    if (!needsPassword.value) {
+      await fetchComments(newSlug)
+      connectWebSocket(newSlug)
+    }
   }
 })
 
@@ -613,5 +698,76 @@ const formatCommentTime = (date) => {
 @media (max-width: 768px) {
   .post-view { flex-direction: column; }
   .post-sidebar { width: 100%; }
+}
+
+/* Password Protection */
+.password-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: var(--bg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+.password-card {
+  background: var(--card-bg);
+  padding: 40px;
+  border-radius: 12px;
+  box-shadow: 0 8px 40px var(--shadow);
+  text-align: center;
+  max-width: 400px;
+}
+.password-card h2 {
+  margin: 0 0 12px;
+  color: var(--text-h);
+}
+.password-card p {
+  color: var(--text);
+  opacity: 0.7;
+  margin: 0 0 20px;
+}
+.password-input-wrapper {
+  display: flex;
+  gap: 10px;
+}
+.password-input {
+  flex: 1;
+  padding: 12px 16px;
+  border: 2px solid var(--border);
+  border-radius: 8px;
+  font-size: 14px;
+  background: var(--bg);
+  color: var(--text);
+  transition: border-color 0.2s;
+}
+.password-input:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+.password-btn {
+  padding: 12px 24px;
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.password-btn:hover:not(:disabled) {
+  opacity: 0.9;
+}
+.password-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+.password-error {
+  color: #ff6b6b;
+  margin-top: 12px;
+  font-size: 14px;
 }
 </style>

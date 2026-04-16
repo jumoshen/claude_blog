@@ -1,5 +1,8 @@
 <template>
   <div class="post-view" v-if="post">
+    <!-- 点赞粒子效果 -->
+    <LikeEffect v-if="showLikeEffect" :x="likeEffectX" :y="likeEffectY" color="#ff6b6b" @complete="showLikeEffect = false" />
+
     <!-- Password Protection -->
     <div v-if="needsPassword" class="password-overlay">
       <div class="password-card">
@@ -32,7 +35,7 @@
           <span v-if="post.is_pinned" class="pin-badge">置顶</span>
           <span v-if="post.is_featured" class="feature-badge">推荐</span>
           <div class="post-actions">
-            <button class="action-btn like-btn" :class="{ active: isLiked }" @click="toggleLike" :title="isLiked ? '取消点赞' : '点赞'">
+            <button class="action-btn like-btn" :class="{ active: isLiked }" @click="toggleLike($event)" :title="isLiked ? '取消点赞' : '点赞'">
               <svg width="18" height="18" viewBox="0 0 24 24" :fill="isLiked ? 'currentColor' : 'none'" stroke="currentColor" stroke-width="2">
                 <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
               </svg>
@@ -207,6 +210,7 @@ import { marked } from 'marked'
 import api from '../api'
 import SharePoster from '../components/post/SharePoster.vue'
 import DonationModal from '../components/post/DonationModal.vue'
+import LikeEffect from '../components/common/LikeEffect.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -230,6 +234,9 @@ const relatedPosts = ref([])
 const isLiked = ref(false)
 const isFavorited = ref(false)
 const likeCount = ref(0)
+const showLikeEffect = ref(false)
+const likeEffectX = ref(0)
+const likeEffectY = ref(0)
 
 // Password protection
 const needsPassword = ref(false)
@@ -488,12 +495,19 @@ const canSubmit = computed(() => {
          commentForm.value.content.trim().length > 0
 })
 
-const toggleLike = async () => {
+const toggleLike = async (event) => {
   try {
     const res = await api.likePost(route.params.slug)
     if (res.code === 0) {
       isLiked.value = res.data.liked
       likeCount.value = res.data.count
+      // Trigger particle effect on like
+      if (res.data.liked && event) {
+        const rect = event.target.getBoundingClientRect()
+        likeEffectX.value = rect.left + rect.width / 2
+        likeEffectY.value = rect.top + rect.height / 2
+        showLikeEffect.value = true
+      }
     }
   } catch (e) {
     console.error('Failed to toggle like:', e)

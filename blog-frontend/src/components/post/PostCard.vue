@@ -92,9 +92,14 @@ const formatDate = (date) => {
   box-shadow: 0 12px 40px var(--shadow);
 }
 
-/* 通用悬浮效果 */
+/* 3D悬浮效果 */
+.post-card {
+  transform-style: preserve-3d;
+  perspective: 1000px;
+}
+
 .post-card:hover {
-  transform: translateY(-4px);
+  transform: translateY(-4px) rotateX(2deg) rotateY(-2deg);
 }
 
 /* 像素风：块状浮起 + 像素阴影 */

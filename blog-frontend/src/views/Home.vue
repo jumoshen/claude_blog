@@ -1,5 +1,7 @@
 <template>
   <div class="home" :class="'theme-' + styleStore.currentTheme">
+    <!-- 粒子背景 -->
+    <ParticlesBackground :particle-count="40" />
     <div class="main-content">
       <div class="post-list">
         <transition name="fade" appear>
@@ -100,6 +102,7 @@ import api from '../api'
 import PostCard from '../components/post/PostCard.vue'
 import TagCloud from '../components/post/TagCloud.vue'
 import CategoryList from '../components/post/CategoryList.vue'
+import ParticlesBackground from '../components/common/ParticlesBackground.vue'
 import { useStyleStore } from '../store/style'
 
 const route = useRoute()

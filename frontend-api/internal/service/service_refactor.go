@@ -15,7 +15,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/go-redis/redis/v8"
-	"github.com/golang-jwt/jwt/v5"
+	jwtlib "github.com/golang-jwt/jwt/v5"
 	"github.com/yuin/goldmark"
 	"github.com/yuin/goldmark/extension"
 	"github.com/yuin/goldmark/parser"
@@ -25,6 +25,7 @@ import (
 
 	"markdown-blog/internal/config"
 	"markdown-blog/internal/model"
+	"markdown-blog/internal/pkg/jwt"
 	"markdown-blog/internal/repository"
 )
 
@@ -1194,16 +1195,22 @@ func (s *Service) LoginBlogUser(username, password string) (*BlogUserInfo, strin
 // generateBlogUserToken 生成博客用户 JWT token
 func (s *Service) generateBlogUserToken(user *model.BlogUser) (string, error) {
 	now := time.Now()
-	claims := jwt.MapClaims{
-		"user_id":  user.ID,
-		"username": user.Username,
-		"email":    user.Email,
-		"exp":      now.Add(time.Duration(s.cfg.JWT.Expiration) * time.Second).Unix(),
-		"iat":      now.Unix(),
-		"iss":      s.cfg.JWT.Issuer,
+	claims := &jwt.Claims{
+		UserID:    int64(user.ID),
+		Login:     user.Username,
+		Name:      user.Nickname,
+		AvatarURL: user.AvatarURL,
+		Email:     user.Email,
+		RegisteredClaims: jwtlib.RegisteredClaims{
+			ID:        fmt.Sprintf("%d-%d", user.ID, now.UnixNano()),
+			Subject:   fmt.Sprintf("%d", user.ID),
+			Issuer:    s.cfg.JWT.Issuer,
+			IssuedAt:  jwtlib.NewNumericDate(now),
+			ExpiresAt: jwtlib.NewNumericDate(now.Add(time.Duration(s.cfg.JWT.Expiration) * time.Second)),
+		},
 	}
 
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	token := jwtlib.NewWithClaims(jwtlib.SigningMethodHS256, claims)
 	return token.SignedString([]byte(s.cfg.JWT.Secret))
 }
 
@@ -1267,6 +1274,32 @@ func (s *Service) GetPostLikeCount(postSlug string) (int64, error) {
 		return 0, err
 	}
 	return s.repo.CountPostLikes(post.ID)
+}
+
+// HasUserLikedPost 检查用户是否已点赞文章
+func (s *Service) HasUserLikedPost(postSlug string, userID uint) (bool, error) {
+	post, err := s.repo.GetPostBySlug(postSlug)
+	if err != nil {
+		return false, err
+	}
+	like, err := s.repo.GetPostLike(post.ID, userID)
+	if err != nil {
+		return false, err
+	}
+	return like != nil, nil
+}
+
+// HasUserFavoritedPost 检查用户是否已收藏文章
+func (s *Service) HasUserFavoritedPost(postSlug string, userID uint) (bool, error) {
+	post, err := s.repo.GetPostBySlug(postSlug)
+	if err != nil {
+		return false, err
+	}
+	fav, err := s.repo.GetPostFavorite(post.ID, userID)
+	if err != nil {
+		return false, err
+	}
+	return fav != nil, nil
 }
 
 // FavoritePost 收藏/取消收藏文章

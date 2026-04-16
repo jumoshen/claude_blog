@@ -53,7 +53,7 @@ func (h *UserHandler) Register(c *gin.Context) {
 
 // Login 用户登录
 // @Summary Login
-// @Description Login with username and password
+// @Description Login with username, password and captcha
 // @Tags auth
 // @Accept json
 // @Produce json
@@ -62,12 +62,21 @@ func (h *UserHandler) Register(c *gin.Context) {
 // @Router /api/v1/auth/login [post]
 func (h *UserHandler) Login(c *gin.Context) {
 	var req struct {
-		Username string `json:"username" binding:"required"`
-		Password string `json:"password" binding:"required"`
+		Username  string `json:"username" binding:"required"`
+		Password  string `json:"password" binding:"required"`
+		Captcha   string `json:"captcha" binding:"required"`
+		CaptchaID string `json:"captcha_id" binding:"required"`
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
 		response.BadRequest(c, "Invalid request: "+err.Error())
+		return
+	}
+
+	// 验证验证码
+	captchaHandler := c.MustGet("captchaHandler").(*CaptchaHandler)
+	if !captchaHandler.Validate(req.CaptchaID, req.Captcha) {
+		response.BadRequest(c, "验证码错误")
 		return
 	}
 

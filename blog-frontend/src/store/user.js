@@ -61,23 +61,5 @@ export const useUserStore = defineStore('user', {
       }
       return null
     },
-
-    // DEBUG: Auto login as test user for development
-    async debugAutoLogin() {
-      try {
-        const res = await fetch('http://localhost:8082/api/v1/auth/login', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ username: 'testuser2', password: 'Test123456' })
-        }).then(r => r.json())
-        if (res.code === 0) {
-          this.setUser(res.data.user, res.data.token)
-          return true
-        }
-      } catch (e) {
-        console.error('Auto login failed:', e)
-      }
-      return false
-    },
   },
 })

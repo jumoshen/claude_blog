@@ -13,11 +13,6 @@ import { useUserStore } from './store/user'
 const styleStore = useStyleStore()
 const userStore = useUserStore()
 
-// DEBUG: Auto login as test user for development
-if (import.meta.env.DEV) {
-  userStore.debugAutoLogin()
-}
-
 // Danmu state - shared across app
 const danmuLayer = ref(null)
 const danmuSettings = reactive({

@@ -32,3 +32,6 @@ coverage.out
 
 # Database
 *.db
+
+# Local scripts
+scripts/

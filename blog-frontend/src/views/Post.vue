@@ -416,14 +416,27 @@ const fetchPost = async () => {
   } catch (e) {
     console.error('Failed to fetch related posts:', e)
   }
-  // Fetch like count
+  // Fetch like count and user's like status
   try {
     const likeRes = await api.getPostLikes(route.params.slug)
     if (likeRes.code === 0) {
       likeCount.value = likeRes.data.count
+      if (likeRes.data.liked !== undefined) {
+        isLiked.value = likeRes.data.liked
+      }
     }
   } catch (e) {
     console.error('Failed to fetch like count:', e)
+  }
+
+  // Fetch user's favorite status
+  try {
+    const favRes = await api.getPostFavorite(route.params.slug)
+    if (favRes.code === 0 && favRes.data.favorited !== undefined) {
+      isFavorited.value = favRes.data.favorited
+    }
+  } catch (e) {
+    console.error('Failed to fetch favorite status:', e)
   }
 }
 

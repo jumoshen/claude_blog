@@ -54,6 +54,12 @@ export default {
   logout: () => api.post('/auth/logout'),
   getMe: () => api.get('/auth/me'),
 
+  // Captcha
+  getCaptcha: () => api.get('/captcha'),
+
+  // Password Login
+  loginWithPassword: (data) => api.post('/auth/login', data),
+
   // Comments
   getComments: (postSlug) => api.get(`/comments/${postSlug}`),
   createComment: (data) => api.post('/comments', data),
@@ -61,6 +67,7 @@ export default {
   // Like & Favorite
   likePost: (slug) => api.post(`/posts/${slug}/like`),
   getPostLikes: (slug) => api.get(`/posts/${slug}/likes`),
+  getPostFavorite: (slug) => api.get(`/posts/${slug}/favorite`),
   favoritePost: (slug) => api.post(`/posts/${slug}/favorite`),
   getMyFavorites: () => api.get('/users/me/favorites'),
 

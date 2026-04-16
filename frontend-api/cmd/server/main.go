@@ -73,6 +73,7 @@ func main() {
 	tagHandler := handler.NewTagHandler(svc, l)
 	userHandler := handler.NewUserHandler(svc, l)
 	adminHandler := handler.NewAdminHandler(svc, l)
+	captchaHandler := handler.NewCaptchaHandler()
 
 	// Setup Gin
 	gin.SetMode(gin.ReleaseMode)
@@ -106,8 +107,9 @@ func main() {
 		v1.GET("/posts/:slug/toc", postHandler.GetTOC)
 		v1.GET("/posts/:slug/navigation", postHandler.GetNavigation)
 		v1.GET("/posts/:slug/related", postHandler.ListRelatedPosts)
-		v1.GET("/posts/:slug/likes", postHandler.GetPostLikes)
+		v1.GET("/posts/:slug/likes", middleware.OptionalAuthMiddleware(jwtUtil), postHandler.GetPostLikes)
 		v1.POST("/posts/:slug/like", middleware.AuthMiddleware(jwtUtil), postHandler.LikePost)
+		v1.GET("/posts/:slug/favorite", middleware.OptionalAuthMiddleware(jwtUtil), postHandler.GetPostFavorite)
 		v1.POST("/posts/:slug/favorite", middleware.AuthMiddleware(jwtUtil), postHandler.FavoritePost)
 		v1.GET("/posts/:slug/check", postHandler.CheckPassword)
 		v1.POST("/posts/:slug/verify", postHandler.VerifyPassword)
@@ -136,8 +138,13 @@ func main() {
 
 			// Blog user auth routes (C端)
 			auth.POST("/register", userHandler.Register)
-			auth.POST("/login", userHandler.Login)
+			auth.POST("/login", captchaMiddleware(captchaHandler), userHandler.Login)
 		}
+
+		// Captcha route
+		v1.GET("/captcha", func(c *gin.Context) {
+			captchaHandler.Generate(c)
+		})
 
 		// Blog user routes (C端)
 		blogUsers := v1.Group("/blogusers")
@@ -261,6 +268,14 @@ func cors() gin.HandlerFunc {
 			return
 		}
 
+		c.Next()
+	}
+}
+
+// captchaMiddleware 将验证码handler传递给后续handler
+func captchaMiddleware(h *handler.CaptchaHandler) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		c.Set("captchaHandler", h)
 		c.Next()
 	}
 }

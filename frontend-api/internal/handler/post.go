@@ -463,7 +463,7 @@ func (h *PostHandler) LikePost(c *gin.Context) {
 
 // GetPostLikes 获取文章点赞数
 // @Summary Get post like count
-// @Description Returns the like count of a post
+// @Description Returns the like count of a post and current user's like status
 // @Tags posts
 // @Produce json
 // @Param slug path string true "Post slug"
@@ -478,7 +478,18 @@ func (h *PostHandler) GetPostLikes(c *gin.Context) {
 		return
 	}
 
-	response.Success(c, gin.H{"count": count})
+	result := gin.H{"count": count}
+
+	// Check if user is logged in and get their like status
+	claims := middleware.GetUserClaims(c)
+	if claims != nil {
+		liked, err := h.svc.HasUserLikedPost(slug, uint(claims.UserID))
+		if err == nil {
+			result["liked"] = liked
+		}
+	}
+
+	response.Success(c, result)
 }
 
 // FavoritePost 收藏/取消收藏文章
@@ -503,6 +514,32 @@ func (h *PostHandler) FavoritePost(c *gin.Context) {
 	if err != nil {
 		h.log.Error("Failed to favorite post: %v", err)
 		response.InternalError(c, "Failed to favorite post")
+		return
+	}
+
+	response.Success(c, gin.H{"favorited": favorited})
+}
+
+// GetPostFavorite 获取文章收藏状态
+// @Summary Get post favorite status
+// @Description Returns whether the current user has favorited the post
+// @Tags posts
+// @Produce json
+// @Param slug path string true "Post slug"
+// @Success 200 {object} response.Response
+// @Router /api/v1/posts/{slug}/favorite [get]
+func (h *PostHandler) GetPostFavorite(c *gin.Context) {
+	slug := c.Param("slug")
+
+	claims := middleware.GetUserClaims(c)
+	if claims == nil {
+		response.Success(c, gin.H{"favorited": false})
+		return
+	}
+
+	favorited, err := h.svc.HasUserFavoritedPost(slug, uint(claims.UserID))
+	if err != nil {
+		response.NotFound(c, "Post not found")
 		return
 	}
 

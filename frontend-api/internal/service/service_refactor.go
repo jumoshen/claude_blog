@@ -24,6 +24,7 @@ import (
 	"gorm.io/gorm"
 
 	"markdown-blog/internal/config"
+	"markdown-blog/internal/dao"
 	"markdown-blog/internal/model"
 	"markdown-blog/internal/pkg/jwt"
 	"markdown-blog/internal/repository"
@@ -31,6 +32,7 @@ import (
 
 type Service struct {
 	repo *repository.Repository
+	dao  *dao.DAOS
 	cfg  *config.Config
 	md   goldmark.Markdown
 }
@@ -44,6 +46,7 @@ func New(cfg *config.Config, repo *repository.Repository) *Service {
 
 	return &Service{
 		repo: repo,
+		dao:  dao.NewDAOS(repo),
 		cfg:  cfg,
 		md:   md,
 	}
@@ -69,8 +72,8 @@ func (s *Service) toPostInfoList(posts []model.Post) []PostInfo {
 		postIDs[i] = p.ID
 	}
 
-	tagMap, _ := s.repo.GetPostTags(postIDs)
-	catMap, _ := s.repo.GetPostCategories(postIDs)
+	tagMap, _ := s.dao.Post.GetPostTags(postIDs)
+	catMap, _ := s.dao.Post.GetPostCategories(postIDs)
 
 	result := make([]PostInfo, 0, len(posts))
 	for _, p := range posts {
@@ -1142,9 +1145,9 @@ func (s *Service) RegisterBlogUser(username, email, password string) (*BlogUserI
 
 	user := &model.BlogUser{
 		Username:     username,
-		Email:       email,
+		Email:        email,
 		PasswordHash: string(hashedPassword),
-		Nickname:    username,
+		Nickname:     username,
 	}
 
 	if err := s.repo.CreateBlogUser(user); err != nil {

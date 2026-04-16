@@ -90,10 +90,24 @@ func (d *FavoriteDAO) GetPostFavorite(postID, userID uint) (*model.PostFavorite,
 }
 
 // ListUserFavorites 获取用户的所有收藏
-func (d *FavoriteDAO) ListUserFavorites(userID uint) ([]model.PostFavorite, error) {
+func (d *FavoriteDAO) ListUserFavorites(userID uint) ([]model.Post, error) {
 	var favorites []model.PostFavorite
 	if err := d.db.Where("user_id = ?", userID).Order("created_at DESC").Find(&favorites).Error; err != nil {
 		return nil, err
 	}
-	return favorites, nil
+
+	var postIDs []uint
+	for _, f := range favorites {
+		postIDs = append(postIDs, f.PostID)
+	}
+
+	if len(postIDs) == 0 {
+		return []model.Post{}, nil
+	}
+
+	var posts []model.Post
+	if err := d.db.Where("id IN ?", postIDs).Find(&posts).Error; err != nil {
+		return nil, err
+	}
+	return posts, nil
 }

@@ -21,7 +21,6 @@ import (
 	"github.com/yuin/goldmark/parser"
 	"github.com/yuin/goldmark/renderer/html"
 	"golang.org/x/crypto/bcrypt"
-	"gorm.io/gorm"
 
 	"markdown-blog/internal/config"
 	"markdown-blog/internal/dao"
@@ -123,7 +122,7 @@ func (s *Service) GetRepo() *repository.Repository {
 
 // ListPosts returns all posts
 func (s *Service) ListPosts() ([]PostInfo, error) {
-	posts, err := s.repo.ListPosts()
+	posts, err := s.dao.Post.ListPosts()
 	if err != nil {
 		return nil, err
 	}
@@ -139,8 +138,8 @@ func (s *Service) ListPosts() ([]PostInfo, error) {
 	}
 
 	// 从 normalized 表获取 tags 和 categories
-	tagMap, _ := s.repo.GetPostTags(postIDs)
-	catMap, _ := s.repo.GetPostCategories(postIDs)
+	tagMap, _ := s.dao.Post.GetPostTags(postIDs)
+	catMap, _ := s.dao.Post.GetPostCategories(postIDs)
 
 	result := make([]PostInfo, 0, len(posts))
 	for _, p := range posts {
@@ -162,7 +161,7 @@ func (s *Service) ListPosts() ([]PostInfo, error) {
 
 // ListPostsPaginated 分页获取已发布文章
 func (s *Service) ListPostsPaginated(tag string, category string, page, pageSize int) ([]PostInfo, int64, error) {
-	posts, total, err := s.repo.ListPostsPaginated(tag, category, page, pageSize)
+	posts, total, err := s.dao.Post.ListPostsPaginated(tag, category, page, pageSize)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -178,8 +177,8 @@ func (s *Service) ListPostsPaginated(tag string, category string, page, pageSize
 	}
 
 	// 从 normalized 表获取 tags 和 categories
-	tagMap, _ := s.repo.GetPostTags(postIDs)
-	catMap, _ := s.repo.GetPostCategories(postIDs)
+	tagMap, _ := s.dao.Post.GetPostTags(postIDs)
+	catMap, _ := s.dao.Post.GetPostCategories(postIDs)
 
 	result := make([]PostInfo, 0, len(posts))
 	for _, p := range posts {
@@ -202,17 +201,17 @@ func (s *Service) ListPostsPaginated(tag string, category string, page, pageSize
 
 // GetPost returns a single post by slug
 func (s *Service) GetPost(slug string) (*PostInfo, string, error) {
-	post, err := s.repo.GetPostBySlug(slug)
+	post, err := s.dao.Post.GetPostBySlug(slug)
 	if err != nil {
 		return nil, "", err
 	}
 
 	// Increment views
-	s.repo.GetDB().Model(post).Update("views", gorm.Expr("views + 1"))
+	s.dao.Post.IncrementViews(slug)
 
 	// 从 normalized 表获取 tags 和 categories
-	tagMap, _ := s.repo.GetPostTags([]uint{post.ID})
-	catMap, _ := s.repo.GetPostCategories([]uint{post.ID})
+	tagMap, _ := s.dao.Post.GetPostTags([]uint{post.ID})
+	catMap, _ := s.dao.Post.GetPostCategories([]uint{post.ID})
 
 	info := &PostInfo{
 		Slug:        post.Slug,
@@ -1235,13 +1234,13 @@ func (s *Service) GetBlogUserByID(id uint) (*BlogUserInfo, error) {
 // LikePost 点赞/取消点赞文章
 func (s *Service) LikePost(postSlug string, userID uint) (bool, int64, error) {
 	// 获取文章
-	post, err := s.repo.GetPostBySlug(postSlug)
+	post, err := s.dao.Post.GetPostBySlug(postSlug)
 	if err != nil {
 		return false, 0, err
 	}
 
 	// 检查是否已点赞
-	like, err := s.repo.GetPostLike(post.ID, userID)
+	like, err := s.dao.Like.GetPostLike(post.ID, userID)
 	if err != nil {
 		return false, 0, err
 	}
@@ -1249,20 +1248,20 @@ func (s *Service) LikePost(postSlug string, userID uint) (bool, int64, error) {
 	liked := true
 	if like != nil {
 		// 已点赞，取消
-		if err := s.repo.RemovePostLike(post.ID, userID); err != nil {
+		if err := s.dao.Like.RemovePostLike(post.ID, userID); err != nil {
 			return false, 0, err
 		}
 		liked = false
 	} else {
 		// 未点赞，添加
-		if err := s.repo.AddPostLike(post.ID, userID); err != nil {
+		if err := s.dao.Like.AddPostLike(post.ID, userID); err != nil {
 			return false, 0, err
 		}
 		liked = true
 	}
 
 	// 获取最新点赞数
-	count, err := s.repo.CountPostLikes(post.ID)
+	count, err := s.dao.Like.CountPostLikes(post.ID)
 	if err != nil {
 		return liked, 0, err
 	}
@@ -1272,20 +1271,20 @@ func (s *Service) LikePost(postSlug string, userID uint) (bool, int64, error) {
 
 // GetPostLikeCount 获取文章点赞数
 func (s *Service) GetPostLikeCount(postSlug string) (int64, error) {
-	post, err := s.repo.GetPostBySlug(postSlug)
+	post, err := s.dao.Post.GetPostBySlug(postSlug)
 	if err != nil {
 		return 0, err
 	}
-	return s.repo.CountPostLikes(post.ID)
+	return s.dao.Like.CountPostLikes(post.ID)
 }
 
 // HasUserLikedPost 检查用户是否已点赞文章
 func (s *Service) HasUserLikedPost(postSlug string, userID uint) (bool, error) {
-	post, err := s.repo.GetPostBySlug(postSlug)
+	post, err := s.dao.Post.GetPostBySlug(postSlug)
 	if err != nil {
 		return false, err
 	}
-	like, err := s.repo.GetPostLike(post.ID, userID)
+	like, err := s.dao.Like.GetPostLike(post.ID, userID)
 	if err != nil {
 		return false, err
 	}
@@ -1294,11 +1293,11 @@ func (s *Service) HasUserLikedPost(postSlug string, userID uint) (bool, error) {
 
 // HasUserFavoritedPost 检查用户是否已收藏文章
 func (s *Service) HasUserFavoritedPost(postSlug string, userID uint) (bool, error) {
-	post, err := s.repo.GetPostBySlug(postSlug)
+	post, err := s.dao.Post.GetPostBySlug(postSlug)
 	if err != nil {
 		return false, err
 	}
-	fav, err := s.repo.GetPostFavorite(post.ID, userID)
+	fav, err := s.dao.Favorite.GetPostFavorite(post.ID, userID)
 	if err != nil {
 		return false, err
 	}
@@ -1307,24 +1306,24 @@ func (s *Service) HasUserFavoritedPost(postSlug string, userID uint) (bool, erro
 
 // FavoritePost 收藏/取消收藏文章
 func (s *Service) FavoritePost(postSlug string, userID uint) (bool, error) {
-	post, err := s.repo.GetPostBySlug(postSlug)
+	post, err := s.dao.Post.GetPostBySlug(postSlug)
 	if err != nil {
 		return false, err
 	}
 
-	fav, err := s.repo.GetPostFavorite(post.ID, userID)
+	fav, err := s.dao.Favorite.GetPostFavorite(post.ID, userID)
 	if err != nil {
 		return false, err
 	}
 
 	favorited := true
 	if fav != nil {
-		if err := s.repo.RemovePostFavorite(post.ID, userID); err != nil {
+		if err := s.dao.Favorite.RemovePostFavorite(post.ID, userID); err != nil {
 			return false, err
 		}
 		favorited = false
 	} else {
-		if err := s.repo.AddPostFavorite(post.ID, userID); err != nil {
+		if err := s.dao.Favorite.AddPostFavorite(post.ID, userID); err != nil {
 			return false, err
 		}
 		favorited = true
@@ -1335,7 +1334,7 @@ func (s *Service) FavoritePost(postSlug string, userID uint) (bool, error) {
 
 // ListMyFavorites 获取我的收藏列表
 func (s *Service) ListMyFavorites(userID uint) ([]PostInfo, error) {
-	posts, err := s.repo.ListUserFavorites(userID)
+	posts, err := s.dao.Favorite.ListUserFavorites(userID)
 	if err != nil {
 		return nil, err
 	}

@@ -9,13 +9,17 @@ services:
     environment:
       - MYSQL_ROOT_PASSWORD=Blog2024Secure
       - MYSQL_DATABASE=blog
+      - TZ=Asia/Shanghai
     ports:
       - "3308:3306"
     volumes:
       - mysql_data:/var/lib/mysql
+      - /etc/localtime:/etc/localtime:ro
+      - /etc/timezone:/etc/timezone:ro
     networks:
       - blogdeploy_blog-network
     restart: always
+    command: --default-time-zone=+08:00
 
   redis:
     image: redis:7-alpine

@@ -3,6 +3,7 @@ package handler
 import (
 	"html/template"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -672,34 +673,56 @@ func (h *PostHandler) GetSitemap(c *gin.Context) {
 		return
 	}
 
+	// 获取所有 tags
+	tags, _ := h.svc.GetAllTags()
+	// 获取所有 categories
+	categoryMap, _ := h.svc.GetAllCategories()
+
 	baseURL := "https://jumoshen.cn"
 
-	xml := `<?xml version="1.0" encoding="UTF-8"?>`
-	xml += `<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">`
+	var sb strings.Builder
+	sb.WriteString(`<?xml version="1.0" encoding="UTF-8"?>`)
+	sb.WriteString(`<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">`)
 
 	// Homepage
-	xml += `<url><loc>` + baseURL + `/</loc><changefreq>weekly</changefreq><priority>1.0</priority></url>`
+	sb.WriteString(`<url><loc>` + baseURL + `/</loc><changefreq>weekly</changefreq><priority>1.0</priority></url>`)
 
 	// Archives
-	xml += `<url><loc>` + baseURL + `/archives</loc><changefreq>weekly</changefreq><priority>0.8</priority></url>`
+	sb.WriteString(`<url><loc>` + baseURL + `/archives</loc><changefreq>weekly</changefreq><priority>0.8</priority></url>`)
 
 	// About
-	xml += `<url><loc>` + baseURL + `/about</loc><changefreq>monthly</changefreq><priority>0.5</priority></url>`
+	sb.WriteString(`<url><loc>` + baseURL + `/about</loc><changefreq>monthly</changefreq><priority>0.5</priority></url>`)
+
+	// Tags 总览页
+	sb.WriteString(`<url><loc>` + baseURL + `/tags</loc><changefreq>weekly</changefreq><priority>0.7</priority></url>`)
+
+	// Categories 总览页
+	sb.WriteString(`<url><loc>` + baseURL + `/categories</loc><changefreq>weekly</changefreq><priority>0.7</priority></url>`)
+
+	// 各 tag 页面
+	for _, tag := range tags {
+		sb.WriteString(`<url><loc>` + baseURL + `/tags/` + tag.Slug + `</loc><changefreq>weekly</changefreq><priority>0.6</priority></url>`)
+	}
+
+	// 各 category 页面
+	for cat := range categoryMap {
+		sb.WriteString(`<url><loc>` + baseURL + `/categories/` + cat + `</loc><changefreq>weekly</changefreq><priority>0.6</priority></url>`)
+	}
 
 	// Posts
 	for _, post := range posts {
-		xml += `<url>`
-		xml += `<loc>` + baseURL + `/post/` + post.Slug + `</loc>`
-		xml += `<lastmod>` + post.Date.Format("2006-01-02") + `</lastmod>`
-		xml += `<changefreq>monthly</changefreq>`
-		xml += `<priority>0.9</priority>`
-		xml += `</url>`
+		sb.WriteString(`<url>`)
+		sb.WriteString(`<loc>` + baseURL + `/post/` + post.Slug + `</loc>`)
+		sb.WriteString(`<lastmod>` + post.Date.Format("2006-01-02") + `</lastmod>`)
+		sb.WriteString(`<changefreq>monthly</changefreq>`)
+		sb.WriteString(`<priority>0.9</priority>`)
+		sb.WriteString(`</url>`)
 	}
 
-	xml += `</urlset>`
+	sb.WriteString(`</urlset>`)
 
 	c.Header("Content-Type", "application/xml")
-	c.String(200, xml)
+	c.String(200, sb.String())
 }
 
 // GetRSS generates RSS feed

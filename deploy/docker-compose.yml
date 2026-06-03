@@ -142,8 +142,10 @@ services:
     env_file:
       - .env.ai-cat
     networks:
-      - ai-source_network
-      - blogdeploy_blog-network
+      ai-source_network:
+        aliases:
+          - backend
+      blogdeploy_blog-network:
     restart: always
 
   ai-cat-frontend:

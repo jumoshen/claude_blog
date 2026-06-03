@@ -129,11 +129,44 @@ services:
       - blog-frontend
       - admin-frontend
 
+  # =====================
+  # AI 内容创作平台
+  # =====================
+  ai-cat-backend:
+    container_name: ai-cat-backend
+    image: ghcr.io/jumoshen/ai-cat-backend:latest
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./uploads_data:/app/uploads
+    env_file:
+      - .env.ai-cat
+    networks:
+      - ai-source_network
+      - blogdeploy_blog-network
+    restart: always
+
+  ai-cat-frontend:
+    container_name: ai-cat-frontend
+    image: ghcr.io/jumoshen/ai-cat-frontend:latest
+    ports:
+      - "8083:80"
+    volumes:
+      - ./uploads_data:/usr/share/nginx/html/uploads
+    networks:
+      - ai-source_network
+      - blogdeploy_blog-network
+    restart: always
+
 networks:
   blogdeploy_blog-network:
+    driver: bridge
+  ai-source_network:
+    name: ai-source_network
     driver: bridge
 
 volumes:
   mysql_data:
   minio_data:
   content_data:
+  uploads_data:

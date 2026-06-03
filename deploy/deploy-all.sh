@@ -60,6 +60,9 @@ main() {
     # Nginx 配置
     log "   配置 Nginx..."
     ssh_cmd "cp $SERVER_DEPLOY_PATH/deploy/nginx.conf $SERVER_DEPLOY_PATH/nginx.conf"
+    # AI-cat 环境变量
+    log "   配置 AI-cat..."
+    ssh_cmd "cp $SERVER_DEPLOY_PATH/deploy/.env.ai-cat $SERVER_DEPLOY_PATH/.env.ai-cat"
 
     # Step 3: 登录 GitHub Container Registry (如果需要)
     if [ -n "${GITHUB_TOKEN}" ]; then
@@ -87,10 +90,16 @@ main() {
     log "   拉取 B端 Frontend..."
     ssh_cmd "docker pull ${GHCR_REGISTRY}/${GHCR_OWNER}/claude-blog-admin/admin-frontend:latest"
 
+    # AI-cat 镜像
+    log "   拉取 AI-cat Backend..."
+    ssh_cmd "docker pull ${GHCR_REGISTRY}/${GHCR_OWNER}/ai-cat-backend:latest"
+    log "   拉取 AI-cat Frontend..."
+    ssh_cmd "docker pull ${GHCR_REGISTRY}/${GHCR_OWNER}/ai-cat-frontend:latest"
+
     # Step 6: 停止并删除所有旧服务
     log_step "6. 停止并删除旧服务..."
-    ssh_cmd "docker ps -a --format '{{.Names}}' | grep -E '^cc-blog|^nginx-proxy' | xargs -r docker stop 2>/dev/null || true"
-    ssh_cmd "docker ps -a --format '{{.Names}}' | grep -E '^cc-blog|^nginx-proxy' | xargs -r docker rm 2>/dev/null || true"
+    ssh_cmd "docker ps -a --format '{{.Names}}' | grep -E '^cc-blog|^nginx-proxy|^ai-cat' | xargs -r docker stop 2>/dev/null || true"
+    ssh_cmd "docker ps -a --format '{{.Names}}' | grep -E '^cc-blog|^nginx-proxy|^ai-cat' | xargs -r docker rm 2>/dev/null || true"
 
     # Step 7: 拉取最新镜像并启动新服务
     log_step "7. 拉取最新镜像并启动服务..."
@@ -107,7 +116,7 @@ main() {
     # Step 10: 检查状态
     log_step "8. 检查服务状态..."
     echo ""
-    ssh_cmd "docker ps --format 'table {{.Names}}\t{{.Status}}' | grep -E 'cc-blog|nginx'"
+    ssh_cmd "docker ps --format 'table {{.Names}}\t{{.Status}}' | grep -E 'cc-blog|nginx|ai-cat'"
     echo ""
 
     # Step 11: 测试访问
@@ -131,6 +140,13 @@ main() {
         log "   HTTPS: https://jumoshen.cn - OK"
     else
         log_error "   HTTPS: https://jumoshen.cn - Failed (HTTP $HTTPS_CODE)"
+    fi
+
+    HTTPS_CODE=$(ssh_cmd "curl -s -o /dev/null -w '%{http_code}' https://ai.jumoshen.cn -k")
+    if [ "$HTTPS_CODE" = "200" ]; then
+        log "   AI-cat: https://ai.jumoshen.cn - OK"
+    else
+        log_error "   AI-cat: https://ai.jumoshen.cn - Failed (HTTP $HTTPS_CODE)"
     fi
 
     log ""
